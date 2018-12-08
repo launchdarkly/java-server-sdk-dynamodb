@@ -14,6 +14,9 @@ import java.util.Map;
 import static com.launchdarkly.client.dynamodb.DynamoDBFeatureStoreCore.partitionKey;
 import static com.launchdarkly.client.dynamodb.DynamoDBFeatureStoreCore.sortKey;
 
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -82,13 +85,21 @@ public class DynamoDBFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
     return new DynamoDBFeatureStoreBuilder(TABLE_NAME)
         .endpoint(DYNAMODB_ENDPOINT)
         .region(Region.US_EAST_1)
-        .caching(cached ? FeatureStoreCaching.enabled().ttlSeconds(30) : FeatureStoreCaching.disabled());
+        .caching(cached ? FeatureStoreCaching.enabled().ttlSeconds(30) : FeatureStoreCaching.disabled())
+        .credentials(getTestCredentials());
   }
   
   private DynamoDbClient createTestClient() {
     return DynamoDbClient.builder()
         .endpointOverride(DYNAMODB_ENDPOINT)
         .region(Region.US_EAST_1)
+        .credentialsProvider(getTestCredentials())
         .build();
+  }
+  
+  private AwsCredentialsProvider getTestCredentials() {
+    // The values here don't matter, it just expects us to provide something (since there may not be AWS
+    // environment variables or config files where the tests are running)
+    return StaticCredentialsProvider.create(AwsBasicCredentials.create("key", "secret"));
   }
 }

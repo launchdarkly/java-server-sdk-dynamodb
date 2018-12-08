@@ -244,7 +244,7 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
   
   private Map<String, AttributeValue> marshalItem(VersionedDataKind<?> kind, VersionedData item) {
     String json = FeatureStoreHelpers.marshalJson(item);
-    return ImmutableMap.<String, AttributeValue>of(
+    return ImmutableMap.of(
         partitionKey, AttributeValue.builder().s(namespaceForKind(kind)).build(),
         sortKey, AttributeValue.builder().s(item.getKey()).build(),
         versionAttribute, AttributeValue.builder().n(String.valueOf(item.getVersion())).build(),
