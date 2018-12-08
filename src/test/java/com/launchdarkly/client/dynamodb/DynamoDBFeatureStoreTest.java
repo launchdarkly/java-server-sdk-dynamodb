@@ -1,23 +1,6 @@
 package com.launchdarkly.client.dynamodb;
 
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.DeleteRequest;
-import com.amazonaws.services.dynamodbv2.model.InternalServerErrorException;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.KeyType;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
-import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
-import com.amazonaws.services.dynamodbv2.model.ScanRequest;
-import com.amazonaws.services.dynamodbv2.model.ScanResult;
-import com.amazonaws.services.dynamodbv2.model.WriteRequest;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.launchdarkly.client.FeatureStore;
 import com.launchdarkly.client.FeatureStoreCaching;
 import com.launchdarkly.client.FeatureStoreDatabaseTestBase;
@@ -31,6 +14,13 @@ import java.util.Map;
 import static com.launchdarkly.client.dynamodb.DynamoDBFeatureStoreCore.partitionKey;
 import static com.launchdarkly.client.dynamodb.DynamoDBFeatureStoreCore.sortKey;
 
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
+import software.amazon.awssdk.services.dynamodb.paginators.ScanIterable;
+
 /**
  * Runs the standard database feature store test suite that's defined in the Java SDK.
  * <p>
@@ -41,13 +31,12 @@ import static com.launchdarkly.client.dynamodb.DynamoDBFeatureStoreCore.sortKey;
  * </pre>
  */
 public class DynamoDBFeatureStoreTest extends FeatureStoreDatabaseTestBase<FeatureStore> {
+
   private static final String TABLE_NAME = "LD_DYNAMODB_TEST_TABLE";
   private static final URI DYNAMODB_ENDPOINT = URI.create("http://localhost:8000");
   
   public DynamoDBFeatureStoreTest(boolean cached) {
     super(cached);
-    
-    createTableIfNecessary();
   }
   
   @Override
@@ -62,30 +51,21 @@ public class DynamoDBFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
   
   @Override
   protected void clearAllData() {
-    AmazonDynamoDB client = createTestClient();
+    DynamoDbClient client = createTestClient();
     
     List<Map<String, AttributeValue>> itemsToDelete = new ArrayList<>();
     
-    ScanRequest request = new ScanRequest(TABLE_NAME);
-    request.setConsistentRead(true);
-    request.setProjectionExpression("#namespace, #key");
-    request.addExpressionAttributeNamesEntry("#namespace", partitionKey);
-    request.addExpressionAttributeNamesEntry("#key", sortKey);
-    boolean done = false;
-    
-    while (!done) {
-      ScanResult result = client.scan(request);
-      itemsToDelete.addAll(result.getItems());
-      if (result.getLastEvaluatedKey() == null) {
-        done = true;
-      } else {
-        request.setExclusiveStartKey(result.getLastEvaluatedKey());
-      }
+    ScanIterable results = client.scanPaginator(builder -> builder.tableName(TABLE_NAME)
+        .consistentRead(true)
+        .projectionExpression("#namespace, #key")
+        .expressionAttributeNames(ImmutableMap.of("#namespace", partitionKey, "#key", sortKey)));
+    for (ScanResponse resp: results) {
+      itemsToDelete.addAll(resp.items());
     }
     
     List<WriteRequest> requests = new ArrayList<>();
     for (Map<String, AttributeValue> item: itemsToDelete) {
-      requests.add(new WriteRequest(new DeleteRequest(item)));
+      requests.add(WriteRequest.builder().deleteRequest(builder -> builder.key(item)).build());
     }
     
     DynamoDBFeatureStoreCore.batchWriteRequests(client, TABLE_NAME, requests);
@@ -98,39 +78,17 @@ public class DynamoDBFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
     return true;
   }
   
-  private void createTableIfNecessary() {
-    AmazonDynamoDB client = createTestClient();
-    try {
-      client.describeTable(TABLE_NAME);
-      return; // table exists
-    } catch (ResourceNotFoundException e) {
-      // fall through to code below - we'll create the table
-    } catch (InternalServerErrorException e) {
-      throw e;
-    }
-    
-    List<KeySchemaElement> keys = ImmutableList.of(
-        new KeySchemaElement(partitionKey, KeyType.HASH),
-        new KeySchemaElement(sortKey, KeyType.RANGE));
-    CreateTableRequest request = new CreateTableRequest(TABLE_NAME, keys);
-    List<AttributeDefinition> attrDefs = ImmutableList.of(
-        new AttributeDefinition(partitionKey, ScalarAttributeType.S),
-        new AttributeDefinition(sortKey, ScalarAttributeType.S));
-    request.setAttributeDefinitions(attrDefs);
-    request.setProvisionedThroughput(new ProvisionedThroughput(1L, 1L));
-    
-    client.createTable(request);
-  }
-  
   private DynamoDBFeatureStoreBuilder baseBuilder() {
     return new DynamoDBFeatureStoreBuilder(TABLE_NAME)
-        .endpointAndRegion(DYNAMODB_ENDPOINT, Regions.US_EAST_1.name())
+        .endpoint(DYNAMODB_ENDPOINT)
+        .region(Region.US_EAST_1)
         .caching(cached ? FeatureStoreCaching.enabled().ttlSeconds(30) : FeatureStoreCaching.disabled());
   }
   
-  private AmazonDynamoDB createTestClient() {
-    return AmazonDynamoDBClient.builder()
-        .withEndpointConfiguration(new EndpointConfiguration(DYNAMODB_ENDPOINT.toString(), Regions.US_EAST_1.name()))
+  private DynamoDbClient createTestClient() {
+    return DynamoDbClient.builder()
+        .endpointOverride(DYNAMODB_ENDPOINT)
+        .region(Region.US_EAST_1)
         .build();
   }
 }

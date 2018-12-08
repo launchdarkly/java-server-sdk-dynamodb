@@ -22,8 +22,8 @@ repositories {
 allprojects {
     group = 'com.launchdarkly'
     version = "${version}"
-    sourceCompatibility = 1.7
-    targetCompatibility = 1.7
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
 }
 
 ext {
@@ -44,7 +44,7 @@ libraries.internal = [
 // in the uberjar; the caller must provide them on the classpath at runtime.
 libraries.external = [
     "com.launchdarkly:launchdarkly-client:4.6.0-SNAPSHOT",
-    "com.amazonaws:aws-java-sdk-dynamodb:1.11.327",
+    "software.amazon.awssdk:dynamodb:2.1.4",
     "org.slf4j:slf4j-api:1.7.21"
 ]
 

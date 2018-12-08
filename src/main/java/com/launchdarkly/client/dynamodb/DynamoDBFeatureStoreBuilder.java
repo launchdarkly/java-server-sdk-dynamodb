@@ -1,12 +1,5 @@
 package com.launchdarkly.client.dynamodb;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.launchdarkly.client.FeatureStore;
 import com.launchdarkly.client.FeatureStoreCaching;
 import com.launchdarkly.client.FeatureStoreFactory;
@@ -14,6 +7,12 @@ import com.launchdarkly.client.LDConfig;
 import com.launchdarkly.client.utils.CachingStoreWrapper;
 
 import java.net.URI;
+
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 
 /**
  * Builder/factory class for the DynamoDB feature store.
@@ -25,25 +24,25 @@ import java.net.URI;
  * The AWS SDK provides many configuration options for a DynamoDB client. This class has
  * corresponding methods for some of the most commonly used ones. If you need more sophisticated
  * control over the DynamoDB client, you can construct one of your own and pass it in with the
- * {@link #existingClient(AmazonDynamoDB)} method.
+ * {@link #existingClient(DynamoDbClient)} method.
  */
 public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
   private final String tableName;
   
   private String prefix;
-  private AmazonDynamoDB existingClient;
-  private AmazonDynamoDBClientBuilder clientBuilder;
+  private DynamoDbClient existingClient;
+  private DynamoDbClientBuilder clientBuilder;
   
   private FeatureStoreCaching caching = FeatureStoreCaching.DEFAULT;
   
   DynamoDBFeatureStoreBuilder(String tableName) {
     this.tableName = tableName;
-    clientBuilder = AmazonDynamoDBClient.builder();
+    clientBuilder = DynamoDbClient.builder();
   }
   
   @Override
   public FeatureStore createFeatureStore() {  
-    AmazonDynamoDB client = (existingClient != null) ? existingClient : clientBuilder.build();
+    DynamoDbClient client = (existingClient != null) ? existingClient : clientBuilder.build();
     DynamoDBFeatureStoreCore core = new DynamoDBFeatureStoreCore(client, tableName, prefix);
     CachingStoreWrapper wrapper = new CachingStoreWrapper.Builder(core).caching(caching).build();
     return wrapper;
@@ -55,8 +54,8 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param config an AWS client configuration object
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder clientConfiguration(ClientConfiguration config) {
-    clientBuilder.setClientConfiguration(config);
+  public DynamoDBFeatureStoreBuilder clientOverrideConfiguration(ClientOverrideConfiguration config) {
+    clientBuilder.overrideConfiguration(config);
     return this;
   }
   
@@ -67,22 +66,21 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param credentialsProvider a source of credentials
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder credentials(AWSCredentialsProvider credentialsProvider) {
-    clientBuilder.setCredentials(credentialsProvider);
+  public DynamoDBFeatureStoreBuilder credentials(AwsCredentialsProvider credentialsProvider) {
+    clientBuilder.credentialsProvider(credentialsProvider);
     return this;
   }
   
   /**
-   * Sets the service endpoint and AWS region to use. Normally, you will not use this, as AWS
-   * determines the service endpoint based on your region. However, you can set it explicitly if
-   * you are running your own DynamoDB instance.
+   * Sets the service endpoint to use. Normally, you will not use this, as AWS determines the
+   * service endpoint based on your region. However, you can set it explicitly if you are
+   * running your own DynamoDB instance.
    * 
    * @param endpointUri the custom endpoint URI
-   * @param region the AWS region name
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder endpointAndRegion(URI endpointUri, String region) {
-    clientBuilder.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpointUri.toString(), region));
+  public DynamoDBFeatureStoreBuilder endpoint(URI endpointUri) {
+    clientBuilder.endpointOverride(endpointUri);
     return this;
   }
   
@@ -90,26 +88,14 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * Sets the AWS region to use. If you do not set this, AWS will attempt to determine it from
    * environment variables and/or local configuration files.
    * 
-   * @param region the AWS region name
+   * @param region the AWS region
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder region(String region) {
-    clientBuilder.setRegion(region);
+  public DynamoDBFeatureStoreBuilder region(Region region) {
+    clientBuilder.region(region);
     return this;
   }
 
-  /**
-   * Sets the AWS region to use. If you do not set this, AWS will attempt to determine it from
-   * environment variables and/or local configuration files.
-   * 
-   * @param region the AWS region enum
-   * @return the builder
-   */
-  public DynamoDBFeatureStoreBuilder region(Regions region) {
-    clientBuilder.withRegion(region);
-    return this;
-  }
-  
   /**
    * Sets an optional namespace prefix for all keys stored in DynamoDB. Use this if you are sharing
    * the same database table between multiple clients that are for different LaunchDarkly
@@ -131,7 +117,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param existingClient an existing DynamoDB client instance
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder existingClient(AmazonDynamoDB existingClient) {
+  public DynamoDBFeatureStoreBuilder existingClient(DynamoDbClient existingClient) {
     this.existingClient = existingClient;
     return this;
   }
