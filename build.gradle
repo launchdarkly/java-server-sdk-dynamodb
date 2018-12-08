@@ -1,0 +1,250 @@
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+apply plugin: 'idea'
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'io.codearte.nexus-staging'
+
+configurations.all {
+    // check for updates every build for dependencies with: 'changing: true'
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
+
+repositories {
+    mavenLocal()
+    // Before LaunchDarkly release artifacts get synced to Maven Central they are here along with snapshots:
+    maven { url "https://oss.sonatype.org/content/groups/public/" }
+    mavenCentral()
+}
+
+allprojects {
+    group = 'com.launchdarkly'
+    version = "${version}"
+    sourceCompatibility = 1.7
+    targetCompatibility = 1.7
+}
+
+ext {
+    sdkBasePackage = "com.launchdarkly.client.dynamodb"
+    sdkBaseName = "launchdarkly-client-dynamodb-store"
+}
+
+ext.libraries = [:]
+
+// Add dependencies to "libraries.internal" that are not exposed in our public API. These
+// will be completely omitted from the "thin" jar, and will be embedded with shaded names
+// in the main jar.
+libraries.internal = [
+    "com.google.guava:guava:19.0"
+]
+
+// Add dependencies to "libraries.external" that are exposed in our public API, or that have
+// global state that must be shared between the SDK and the caller.
+libraries.external = [
+    "com.launchdarkly:launchdarkly-client:4.6.0-SNAPSHOT",
+    "com.amazonaws:aws-java-sdk-dynamodb:1.11.327",
+    "org.slf4j:slf4j-api:1.7.21"
+]
+
+// Add dependencies to "libraries.test" that are used only in unit tests.
+libraries.test = [
+    "org.hamcrest:hamcrest-all:1.3",
+    "org.easymock:easymock:3.4",
+    "junit:junit:4.12",
+    "ch.qos.logback:logback-classic:1.1.7",
+    "com.launchdarkly:launchdarkly-client:4.6.0-SNAPSHOT:test"
+]
+
+dependencies {
+    implementation libraries.internal
+    compileClasspath libraries.external
+    runtime libraries.internal, libraries.external
+    testImplementation libraries.test, libraries.internal, libraries.external
+
+    // Unlike what the name might suggest, the "shadow" configuration specifies dependencies that
+    // should *not* be shaded by the Shadow plugin when we build our shaded jars.
+    shadow libraries.external
+}
+
+jar {
+    baseName = sdkBaseName
+    // thin classifier means that the non-shaded non-fat jar is still available
+    // but is opt-in since users will have to specify it.
+    classifier = 'thin'
+    manifest {
+        attributes("Implementation-Version": version)
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '4.10.2'
+}
+
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+        mavenLocal()
+    }
+    dependencies {
+        classpath 'org.ajoberstar:gradle-git:1.5.0-rc.1'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.8.0"
+    }
+}
+
+task testJar(type: Jar, dependsOn: testClasses) {
+    classifier = 'test'
+    from sourceSets.test.output
+}
+
+// custom tasks for creating source/javadoc jars
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+// Returns the names of all Java packages contained in the specified jar - not including
+// enclosing packages like "com" that don't have any classes in them.
+def getPackagesInDependencyJar(jarFile) {
+    new java.util.zip.ZipFile(jarFile).withCloseable { zf ->
+        zf.entries().findAll { !it.directory && it.name.endsWith(".class") }.collect {
+            it.name.substring(0, it.name.lastIndexOf("/")).replace("/", ".")
+        }.unique()
+    }
+}
+
+// Used by shadowJar to specify which packages should be shaded. We should *not* shade
+// any of the dependencies that are specified in the "shadow" configuration, nor any of
+// the classes from the SDK itself.
+def shadeDependencies(jarTask) {
+    def excludePackages = [ "com.launchdarkly.client.dynamodb" ] +
+        configurations.shadow.collectMany { getPackagesInDependencyJar(it)}
+    def topLevelPackages =
+        configurations.runtime.collectMany {
+            getPackagesInDependencyJar(it).collect { it.contains(".") ? it.substring(0, it.indexOf(".")) : it }
+        }.
+            unique().findAll { it != "javax" } // also, don't shade javax
+    topLevelPackages.forEach { top ->
+        jarTask.relocate(top, "com.launchdarkly.shaded." + top) {
+            excludePackages.forEach { exclude(it + ".*") }
+        }
+    }
+}
+
+// We can't actually call shadeDependencies from within the configuration section of shadowJar,
+// because Groovy executes all the configuration sections before executing any tasks, meaning
+// we wouldn't have any build products yet to inspect. So we'll do that configuration step at
+// the last minute after the compile task has executed.
+compileJava.doLast {
+    shadeDependencies(project.tasks.shadowJar)
+}
+
+shadowJar {
+    baseName = sdkBaseName
+    
+    // No classifier means that the shaded jar becomes the default artifact
+    classifier = ''
+
+    // Don't include slf4j or gson. This is the only difference between this artifact
+    // and shadowJarAll, which does include (but doesn't shade) slf4j and gson.
+    dependencies{
+        exclude(dependency('org.slf4j:.*:.*'))
+        exclude(dependency('com.google.code.gson:.*:.*'))
+    }
+
+    manifest {
+        attributes("Implementation-Version": version)
+    }
+}
+
+artifacts {
+    archives jar, sourcesJar, javadocJar, shadowJar
+}
+
+test {
+    testLogging {
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+        showStandardStreams = true
+        exceptionFormat = 'full'
+    }
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+nexusStaging {
+    packageGroup = "com.launchdarkly"
+}
+
+def pomConfig = {
+    name 'LaunchDarkly Java SDK DynamoDB integration'
+    packaging 'jar'
+    url 'https://github.com/launchdarkly/java-dynamodb-store'
+
+    licenses {
+        license {
+            name 'The Apache License, Version 2.0'
+            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+        }
+    }
+
+    developers {
+        developer {
+            id 'jkodumal'
+            name 'John Kodumal'
+            email 'john@launchdarkly.com'
+        }
+    }
+
+    scm {
+        connection 'scm:git:git://github.com/launchdarkly/java-dynamodb-store.git'
+        developerConnection 'scm:git:ssh:git@github.com:launchdarkly/java-dynamodb-store.git'
+        url 'https://github.com/launchdarkly/java-dynamodb-store'
+    }
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) { publication ->
+            project.shadow.component(publication)
+
+            artifactId = sdkBaseName
+            artifact jar
+            artifact sourcesJar
+            artifact javadocJar
+            artifact testJar
+            
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('description', 'DynamoDB-backed feature store for the LaunchDarkly Java SDK')
+                asNode().children().last() + pomConfig
+            }
+        }
+    }
+    repositories {
+        mavenLocal()
+        maven {
+            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username ossrhUsername
+                password ossrhPassword
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.shadow
+}
