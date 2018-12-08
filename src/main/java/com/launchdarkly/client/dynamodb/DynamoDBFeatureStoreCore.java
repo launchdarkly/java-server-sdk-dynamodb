@@ -96,15 +96,15 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
   @Override
   public <T extends VersionedData> Map<String, T> getAllInternal(VersionedDataKind<T> kind) {
     Map<String, T> itemsOut = new HashMap<>();
-  for (QueryResult result: paginateQuery(makeQueryForKind(kind))) {
-    for (Map<String, AttributeValue> item: result.getItems()) {
-      T itemOut = unmarshalItem(kind, item);
-      if (itemOut != null) {
-        itemsOut.put(itemOut.getKey(), itemOut);
+    for (QueryResult result: paginateQuery(makeQueryForKind(kind))) {
+      for (Map<String, AttributeValue> item: result.getItems()) {
+        T itemOut = unmarshalItem(kind, item);
+        if (itemOut != null) {
+          itemsOut.put(itemOut.getKey(), itemOut);
+        }
       }
     }
-  }
-  return itemsOut;
+    return itemsOut;
   }
 
   @Override
@@ -153,33 +153,33 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
 
   @Override
   public <T extends VersionedData> T upsertInternal(VersionedDataKind<T> kind, T item) {
-      Map<String, AttributeValue> encodedItem = marshalItem(kind, item);
-      
-      if (updateHook != null) { // instrumentation for tests
-        updateHook.run();
-      }
-      
-      try {
-        PutItemRequest put = new PutItemRequest(tableName, encodedItem);
-        put.setConditionExpression("attribute_not_exists(#namespace) or attribute_not_exists(#key) or :version > #version");
-        put.addExpressionAttributeNamesEntry("#namespace", partitionKey);
-        put.addExpressionAttributeNamesEntry("#key", sortKey);
-        put.addExpressionAttributeNamesEntry("#version", versionAttribute);
-        put.addExpressionAttributeValuesEntry(":version", new AttributeValue().withN(String.valueOf(item.getVersion())));
-        client.putItem(put);
-      } catch (ConditionalCheckFailedException e) {
-        // The item was not updated because there's a newer item in the database.
-        // We must now read the item that's in the database and return it, so CachingStoreWrapper can cache it.
-        return getInternal(kind, item.getKey());
-      }
-      
-      return item;
+    Map<String, AttributeValue> encodedItem = marshalItem(kind, item);
+    
+    if (updateHook != null) { // instrumentation for tests
+      updateHook.run();
+    }
+    
+    try {
+      PutItemRequest put = new PutItemRequest(tableName, encodedItem);
+      put.setConditionExpression("attribute_not_exists(#namespace) or attribute_not_exists(#key) or :version > #version");
+      put.addExpressionAttributeNamesEntry("#namespace", partitionKey);
+      put.addExpressionAttributeNamesEntry("#key", sortKey);
+      put.addExpressionAttributeNamesEntry("#version", versionAttribute);
+      put.addExpressionAttributeValuesEntry(":version", new AttributeValue().withN(String.valueOf(item.getVersion())));
+      client.putItem(put);
+    } catch (ConditionalCheckFailedException e) {
+      // The item was not updated because there's a newer item in the database.
+      // We must now read the item that's in the database and return it, so CachingStoreWrapper can cache it.
+      return getInternal(kind, item.getKey());
+    }
+    
+    return item;
   }
 
   @Override
   public boolean initializedInternal() {
-  GetItemResult result = getItemByKeys(initedKey(), initedKey());
-  return result.getItem() != null && result.getItem().size() > 0;
+    GetItemResult result = getItemByKeys(initedKey(), initedKey());
+    return result.getItem() != null && result.getItem().size() > 0;
   }
   
   public void setUpdateHook(Runnable updateHook) {
@@ -199,7 +199,7 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
   }
   
   private QueryRequest makeQueryForKind(VersionedDataKind<?> kind) {
-  Condition cond = new Condition();
+    Condition cond = new Condition();
     cond.setComparisonOperator(ComparisonOperator.EQ);
     cond.setAttributeValueList(ImmutableList.of(new AttributeValue(namespaceForKind(kind))));
 
@@ -211,9 +211,9 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
   
   private GetItemResult getItemByKeys(String namespace, String key) {
     Map<String, AttributeValue> keyMap = ImmutableMap.of(
-      partitionKey, new AttributeValue(namespace),
-      sortKey, new AttributeValue(key)
-  );
+        partitionKey, new AttributeValue(namespace),
+        sortKey, new AttributeValue(key)
+    );
     GetItemRequest req = new GetItemRequest(tableName, keyMap, true);
     return client.getItem(req);
   }
@@ -267,30 +267,30 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
   
   private class QueryIterator implements Iterator<QueryResult> {
     private boolean eof;
-    private QueryRequest request;
+    private final QueryRequest request;
     
     QueryIterator(QueryRequest request) {
       this.request = request;
     }
     
-  @Override
-  public boolean hasNext() {
-    return !eof;
-  }
-
-  @Override
-  public QueryResult next() {
-    if (eof) {
-      return null;
+    @Override
+    public boolean hasNext() {
+      return !eof;
     }
-    QueryResult result = client.query(request);
-    if (result.getLastEvaluatedKey() != null) {
-      request.setExclusiveStartKey(result.getLastEvaluatedKey());
-    } else {
-      eof = true;
+  
+    @Override
+    public QueryResult next() {
+      if (eof) {
+        return null;
+      }
+      QueryResult result = client.query(request);
+      if (result.getLastEvaluatedKey() != null) {
+        request.setExclusiveStartKey(result.getLastEvaluatedKey());
+      } else {
+        eof = true;
+      }
+      return result;
     }
-    return result;
-  }
   }
   
   static void batchWriteRequests(AmazonDynamoDB client, String tableName, List<WriteRequest> requests) {
