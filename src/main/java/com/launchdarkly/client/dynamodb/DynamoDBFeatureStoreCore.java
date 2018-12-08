@@ -62,8 +62,8 @@ import java.util.Set;
  * stored as a single item, this mechanism will not work for extremely large flags or segments.
  * </ul>
  */
-class DynamoDBFeatureStoreCore implements FeatureStoreCore {
-  private static final Logger logger = LoggerFactory.getLogger(DynamoDBFeatureStoreCore.class);
+class DynamoDbFeatureStoreCore implements FeatureStoreCore {
+  private static final Logger logger = LoggerFactory.getLogger(DynamoDbFeatureStoreCore.class);
   
   static final String partitionKey = "namespace";
   static final String sortKey = "key";
@@ -76,7 +76,7 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
   
   private Runnable updateHook;
   
-  DynamoDBFeatureStoreCore(AmazonDynamoDB client, String tableName, String prefix) {
+  DynamoDbFeatureStoreCore(AmazonDynamoDB client, String tableName, String prefix) {
     this.client = client;
     this.tableName = tableName;
     this.prefix = "".equals(prefix) ? null : prefix;

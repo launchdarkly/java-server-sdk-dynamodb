@@ -18,7 +18,7 @@ import java.net.URI;
 /**
  * Builder/factory class for the DynamoDB feature store.
  * <p>
- * Create this builder by calling {@link DatabaseComponents#dynamoDBFeatureStore(String)}, then
+ * Create this builder by calling {@link DatabaseComponents#dynamoDbFeatureStore(String)}, then
  * optionally modify its properties with builder methods, and then include it in your client
  * configuration with {@link LDConfig.Builder#featureStoreFactory(FeatureStoreFactory)}.
  * <p>
@@ -27,7 +27,7 @@ import java.net.URI;
  * control over the DynamoDB client, you can construct one of your own and pass it in with the
  * {@link #existingClient(AmazonDynamoDB)} method.
  */
-public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
+public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
   private final String tableName;
   
   private String prefix;
@@ -36,7 +36,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
   
   private FeatureStoreCaching caching = FeatureStoreCaching.DEFAULT;
   
-  DynamoDBFeatureStoreBuilder(String tableName) {
+  DynamoDbFeatureStoreBuilder(String tableName) {
     this.tableName = tableName;
     clientBuilder = AmazonDynamoDBClient.builder();
   }
@@ -44,7 +44,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
   @Override
   public FeatureStore createFeatureStore() {  
     AmazonDynamoDB client = (existingClient != null) ? existingClient : clientBuilder.build();
-    DynamoDBFeatureStoreCore core = new DynamoDBFeatureStoreCore(client, tableName, prefix);
+    DynamoDbFeatureStoreCore core = new DynamoDbFeatureStoreCore(client, tableName, prefix);
     CachingStoreWrapper wrapper = new CachingStoreWrapper.Builder(core).caching(caching).build();
     return wrapper;
   }
@@ -55,7 +55,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param config an AWS client configuration object
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder clientConfiguration(ClientConfiguration config) {
+  public DynamoDbFeatureStoreBuilder clientConfiguration(ClientConfiguration config) {
     clientBuilder.setClientConfiguration(config);
     return this;
   }
@@ -67,7 +67,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param credentialsProvider a source of credentials
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder credentials(AWSCredentialsProvider credentialsProvider) {
+  public DynamoDbFeatureStoreBuilder credentials(AWSCredentialsProvider credentialsProvider) {
     clientBuilder.setCredentials(credentialsProvider);
     return this;
   }
@@ -81,7 +81,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param region the AWS region name
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder endpointAndRegion(URI endpointUri, String region) {
+  public DynamoDbFeatureStoreBuilder endpointAndRegion(URI endpointUri, String region) {
     clientBuilder.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpointUri.toString(), region));
     return this;
   }
@@ -93,7 +93,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param region the AWS region name
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder region(String region) {
+  public DynamoDbFeatureStoreBuilder region(String region) {
     clientBuilder.setRegion(region);
     return this;
   }
@@ -105,7 +105,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param region the AWS region enum
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder region(Regions region) {
+  public DynamoDbFeatureStoreBuilder region(Regions region) {
     clientBuilder.withRegion(region);
     return this;
   }
@@ -118,7 +118,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param prefix the namespace prefix
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder prefix(String prefix) {
+  public DynamoDbFeatureStoreBuilder prefix(String prefix) {
     this.prefix = prefix;
     return this;
   }
@@ -131,7 +131,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param existingClient an existing DynamoDB client instance
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder existingClient(AmazonDynamoDB existingClient) {
+  public DynamoDbFeatureStoreBuilder existingClient(AmazonDynamoDB existingClient) {
     this.existingClient = existingClient;
     return this;
   }
@@ -144,7 +144,7 @@ public class DynamoDBFeatureStoreBuilder implements FeatureStoreFactory {
    * @param caching a {@link FeatureStoreCaching} object specifying caching parameters
    * @return the builder
    */
-  public DynamoDBFeatureStoreBuilder caching(FeatureStoreCaching caching) {
+  public DynamoDbFeatureStoreBuilder caching(FeatureStoreCaching caching) {
     this.caching = caching;
     return this;
   }
