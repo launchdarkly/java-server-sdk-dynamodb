@@ -5,14 +5,14 @@
  * https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store
  * <p>
  * To use the DynamoDB feature store with the LaunchDarkly client, you will first obtain a
- * builder by calling {@link DatabaseComponents#dynamoDBFeatureStore(String)}, then optionally
+ * builder by calling {@link DatabaseComponents#dynamoDbFeatureStore(String)}, then optionally
  * modify its properties, and then include it in your client configuration. For example:
  * 
  * <pre>
  * import com.launchdarkly.client.*;
  * import com.launchdarkly.client.dynamodb.*;
 
- * DynamoDBFeatureStoreBuilder store = DatabaseComponents.dynamoDBFeatureStore("my-table-name")
+ * DynamoDbFeatureStoreBuilder store = DatabaseComponents.dynamoDbFeatureStore("my-table-name")
  *     .caching(FeatureStoreCaching.enabled().ttlSeconds(30));
  * LDConfig config = new LDConfig.Builder()
  *     .featureStoreFactory(store)
@@ -26,10 +26,10 @@
  * AWS credentials and region from AWS environment variables and/or local configuration files.
  * There are options in the builder for changing some configuration options, or you can
  * configure the DynamoDB client yourself and pass it to the builder with
- * {@link DynamoDBFeatureStoreBuilder#existingClient(com.amazonaws.services.dynamodbv2.AmazonDynamoDB)}.
+ * {@link DynamoDbFeatureStoreBuilder#existingClient(software.amazon.awssdk.services.dynamodb.DynamoDbClient)}.
  * <p>
  * If you are using the same DynamoDB table as a feature store for multiple LaunchDarkly
- * environments, use the {@link com.launchdarkly.client.dynamodb.DynamoDBFeatureStoreBuilder#prefix(String)}
+ * environments, use the {@link com.launchdarkly.client.dynamodb.DynamoDbFeatureStoreBuilder#prefix(String)}
  * option and choose a different prefix string for each, so they will not interfere with each
  * other's data. 
  */

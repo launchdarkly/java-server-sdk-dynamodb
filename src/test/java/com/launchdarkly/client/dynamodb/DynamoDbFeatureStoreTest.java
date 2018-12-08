@@ -11,8 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static com.launchdarkly.client.dynamodb.DynamoDBFeatureStoreCore.partitionKey;
-import static com.launchdarkly.client.dynamodb.DynamoDBFeatureStoreCore.sortKey;
+import static com.launchdarkly.client.dynamodb.DynamoDbFeatureStoreCore.partitionKey;
+import static com.launchdarkly.client.dynamodb.DynamoDbFeatureStoreCore.sortKey;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -42,12 +42,12 @@ import software.amazon.awssdk.services.dynamodb.paginators.ScanIterable;
  *     docker run -p 8000:8000 amazon/dynamodb-local
  * </pre>
  */
-public class DynamoDBFeatureStoreTest extends FeatureStoreDatabaseTestBase<FeatureStore> {
+public class DynamoDbFeatureStoreTest extends FeatureStoreDatabaseTestBase<FeatureStore> {
 
   private static final String TABLE_NAME = "LD_DYNAMODB_TEST_TABLE";
   private static final URI DYNAMODB_ENDPOINT = URI.create("http://localhost:8000");
 
-  public DynamoDBFeatureStoreTest(boolean cached) {
+  public DynamoDbFeatureStoreTest(boolean cached) {
     super(cached);
     
     createTableIfNecessary();
@@ -82,12 +82,12 @@ public class DynamoDBFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
       requests.add(WriteRequest.builder().deleteRequest(builder -> builder.key(item)).build());
     }
     
-    DynamoDBFeatureStoreCore.batchWriteRequests(client, TABLE_NAME, requests);
+    DynamoDbFeatureStoreCore.batchWriteRequests(client, TABLE_NAME, requests);
   }
   
   @Override
   protected boolean setUpdateHook(FeatureStore storeUnderTest, final Runnable hook) {
-    DynamoDBFeatureStoreCore core = (DynamoDBFeatureStoreCore)((CachingStoreWrapper)storeUnderTest).getCore();
+    DynamoDbFeatureStoreCore core = (DynamoDbFeatureStoreCore)((CachingStoreWrapper)storeUnderTest).getCore();
     core.setUpdateHook(hook);
     return true;
   }
@@ -117,8 +117,8 @@ public class DynamoDBFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
     client.createTable(request);
   }
   
-  private DynamoDBFeatureStoreBuilder baseBuilder() {
-    return new DynamoDBFeatureStoreBuilder(TABLE_NAME)
+  private DynamoDbFeatureStoreBuilder baseBuilder() {
+    return new DynamoDbFeatureStoreBuilder(TABLE_NAME)
         .endpoint(DYNAMODB_ENDPOINT)
         .region(Region.US_EAST_1)
         .caching(cached ? FeatureStoreCaching.enabled().ttlSeconds(30) : FeatureStoreCaching.disabled())
