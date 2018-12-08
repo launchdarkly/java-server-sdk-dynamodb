@@ -122,7 +122,7 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
 	      Map<String, AttributeValue> encodedItem = marshalItem(kind, item);
 	      requests.add(new WriteRequest(new PutRequest(encodedItem)));
 	      
-	      Map.Entry<String, String> combinedKey = new AbstractMap.SimpleEntry<String, String>(
+	      Map.Entry<String, String> combinedKey = new AbstractMap.SimpleEntry<>(
 	          namespaceForKind(kind), item.getKey());
 	      unusedOldKeys.remove(combinedKey);
 	      
@@ -133,7 +133,7 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
 	  // Now delete any previously existing items whose keys were not in the current data
 	  for (Map.Entry<String, String> combinedKey: unusedOldKeys) {
 	    if (!combinedKey.getKey().equals(initedKey())) {
-	      Map<String, AttributeValue> keys = ImmutableMap.<String, AttributeValue>of(
+	      Map<String, AttributeValue> keys = ImmutableMap.of(
 	          partitionKey, new AttributeValue(combinedKey.getKey()),
 	          sortKey, new AttributeValue(combinedKey.getValue()));
 	      requests.add(new WriteRequest(new DeleteRequest(keys)));
@@ -141,7 +141,7 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
 	  }
 	  
 	  // Now set the special key that we check in initializedInternal()
-	  Map<String, AttributeValue> initedItem = ImmutableMap.<String, AttributeValue>of(
+	  Map<String, AttributeValue> initedItem = ImmutableMap.of(
         partitionKey, new AttributeValue(initedKey()),
         sortKey, new AttributeValue(initedKey()));
 	  requests.add(new WriteRequest(new PutRequest(initedItem)));
@@ -210,7 +210,7 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
 	}
 	
 	private GetItemResult getItemByKeys(String namespace, String key) {
-	  Map<String, AttributeValue> keyMap = ImmutableMap.<String, AttributeValue>of(
+	  Map<String, AttributeValue> keyMap = ImmutableMap.of(
         partitionKey, new AttributeValue(namespace),
         sortKey, new AttributeValue(key)
     );
@@ -229,7 +229,7 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
 	      for (Map<String, AttributeValue> item: result.getItems()) {
 	        String namespace = item.get(partitionKey).getS();
 	        String key = item.get(sortKey).getS();
-	        keys.add(new AbstractMap.SimpleEntry<String, String>(namespace, key));
+	        keys.add(new AbstractMap.SimpleEntry<>(namespace, key));
 	      }
 	    }
 	  }
@@ -238,7 +238,7 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
 	
 	private Map<String, AttributeValue> marshalItem(VersionedDataKind<?> kind, VersionedData item) {
 	  String json = FeatureStoreHelpers.marshalJson(item);
-	  return ImmutableMap.<String, AttributeValue>of(
+	  return ImmutableMap.of(
         partitionKey, new AttributeValue(namespaceForKind(kind)),
         sortKey, new AttributeValue(item.getKey()),
         versionAttribute, new AttributeValue().withN(String.valueOf(item.getVersion())),
@@ -298,7 +298,7 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
 	  for (int i = 0; i < requests.size(); i += batchSize) {
 	    int limit = (i + batchSize < requests.size()) ? (i + batchSize) : requests.size();
 	    List<WriteRequest> batch = requests.subList(i, limit); 
-	    Map<String, List<WriteRequest>> batchMap = ImmutableMap.<String, List<WriteRequest>>of(tableName, batch);
+	    Map<String, List<WriteRequest>> batchMap = ImmutableMap.of(tableName, batch);
 	    client.batchWriteItem(batchMap);
 	  }
 	}
