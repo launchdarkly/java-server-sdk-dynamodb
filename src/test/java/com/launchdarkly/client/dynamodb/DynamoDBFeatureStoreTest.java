@@ -19,7 +19,16 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.InternalServerErrorException;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 import software.amazon.awssdk.services.dynamodb.paginators.ScanIterable;
@@ -37,9 +46,11 @@ public class DynamoDBFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
 
   private static final String TABLE_NAME = "LD_DYNAMODB_TEST_TABLE";
   private static final URI DYNAMODB_ENDPOINT = URI.create("http://localhost:8000");
-  
+
   public DynamoDBFeatureStoreTest(boolean cached) {
     super(cached);
+    
+    createTableIfNecessary();
   }
   
   @Override
@@ -79,6 +90,31 @@ public class DynamoDBFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
     DynamoDBFeatureStoreCore core = (DynamoDBFeatureStoreCore)((CachingStoreWrapper)storeUnderTest).getCore();
     core.setUpdateHook(hook);
     return true;
+  }
+  
+  private void createTableIfNecessary() {
+    DynamoDbClient client = createTestClient();
+    try {
+      client.describeTable(DescribeTableRequest.builder().tableName(TABLE_NAME).build());
+      return; // table exists
+    } catch (ResourceNotFoundException e) {
+      // fall through to code below - we'll create the table
+    } catch (InternalServerErrorException e) {
+      throw e;
+    }
+    
+    CreateTableRequest request = CreateTableRequest.builder()
+        .tableName(TABLE_NAME)
+        .keySchema(
+            KeySchemaElement.builder().attributeName(partitionKey).keyType(KeyType.HASH).build(),
+            KeySchemaElement.builder().attributeName(sortKey).keyType(KeyType.RANGE).build()
+        ).attributeDefinitions(
+            AttributeDefinition.builder().attributeName(partitionKey).attributeType(ScalarAttributeType.S).build(),
+            AttributeDefinition.builder().attributeName(sortKey).attributeType(ScalarAttributeType.S).build()
+        ).provisionedThroughput(ProvisionedThroughput.builder().readCapacityUnits(1L).writeCapacityUnits(1L).build())
+        .build();
+    
+    client.createTable(request);
   }
   
   private DynamoDBFeatureStoreBuilder baseBuilder() {
