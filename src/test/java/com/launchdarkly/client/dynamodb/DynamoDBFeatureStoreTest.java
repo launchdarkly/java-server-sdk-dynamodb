@@ -1,5 +1,8 @@
 package com.launchdarkly.client.dynamodb;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -125,12 +128,20 @@ public class DynamoDBFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
   private DynamoDBFeatureStoreBuilder baseBuilder() {
     return new DynamoDBFeatureStoreBuilder(TABLE_NAME)
         .endpointAndRegion(DYNAMODB_ENDPOINT, Regions.US_EAST_1.name())
-        .caching(cached ? FeatureStoreCaching.enabled().ttlSeconds(30) : FeatureStoreCaching.disabled());
+        .caching(cached ? FeatureStoreCaching.enabled().ttlSeconds(30) : FeatureStoreCaching.disabled())
+        .credentials(getTestCredentials());
   }
   
   private AmazonDynamoDB createTestClient() {
     return AmazonDynamoDBClient.builder()
         .withEndpointConfiguration(new EndpointConfiguration(DYNAMODB_ENDPOINT.toString(), Regions.US_EAST_1.name()))
+        .withCredentials(getTestCredentials())
         .build();
+  }
+  
+  private AWSCredentialsProvider getTestCredentials() {
+    // The values here don't matter, it just expects us to provide something (since there may not be AWS
+    // environment variables or config files where the tests are running)
+    return new AWSStaticCredentialsProvider(new BasicAWSCredentials("key", "secret"));
   }
 }
