@@ -78,10 +78,10 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
     this.prefix = "".equals(prefix) ? null : prefix;
   }
   
-	@Override
-	public void close() throws IOException {
-	  client.close();
-	}
+  @Override
+  public void close() throws IOException {
+    client.close();
+  }
 
   @Override
   public <T extends VersionedData> T getInternal(VersionedDataKind<T> kind, String key) {
@@ -181,21 +181,21 @@ class DynamoDBFeatureStoreCore implements FeatureStoreCore {
     return resp.item() != null && resp.item().size() > 0;
   }
   
-	public void setUpdateHook(Runnable updateHook) {
-	  this.updateHook = updateHook;
-	}
-	
-	private String prefixedNamespace(String base) {
-	  return prefix == null ? base : (prefix + ":" + base);
-	}
-	
-	private String namespaceForKind(VersionedDataKind<?> kind) {
-	  return prefixedNamespace(kind.getNamespace());
-	}
-	
-	private String initedKey() {
-	  return prefixedNamespace("$inited");
-	}
+  public void setUpdateHook(Runnable updateHook) {
+    this.updateHook = updateHook;
+  }
+  
+  private String prefixedNamespace(String base) {
+    return prefix == null ? base : (prefix + ":" + base);
+  }
+  
+  private String namespaceForKind(VersionedDataKind<?> kind) {
+    return prefixedNamespace(kind.getNamespace());
+  }
+  
+  private String initedKey() {
+    return prefixedNamespace("$inited");
+  }
 
   private QueryRequest.Builder makeQueryForKind(VersionedDataKind<?> kind) {
     Map<String, Condition> keyConditions = ImmutableMap.of(
