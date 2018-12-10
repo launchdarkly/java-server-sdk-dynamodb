@@ -1,0 +1,27 @@
+version: 2
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - build
+
+jobs:
+  build:
+    docker:
+      - image: circleci/java
+      - image: amazon/dynamodb-local
+    steps:
+      - checkout
+      - run: cp gradle.properties.example gradle.properties
+      - run: ./gradlew test
+      - run:
+          name: Save test results
+          command: |
+            mkdir -p ~/junit/;
+            find . -type f -regex ".*/build/test-results/.*xml" -exec cp {} ~/junit/ \;
+          when: always
+      - store_test_results:
+          path: ~/junit
+      - store_artifacts:
+          path: ~/junit
