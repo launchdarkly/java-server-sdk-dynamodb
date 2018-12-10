@@ -88,17 +88,17 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
   }
 
   @Override
-  public <T extends VersionedData> T getInternal(VersionedDataKind<T> kind, String key) {
+  public VersionedData getInternal(VersionedDataKind<?> kind, String key) {
       GetItemResult result = getItemByKeys(namespaceForKind(kind), key);
       return unmarshalItem(kind, result.getItem());
   }
 
   @Override
-  public <T extends VersionedData> Map<String, T> getAllInternal(VersionedDataKind<T> kind) {
-    Map<String, T> itemsOut = new HashMap<>();
+  public Map<String, VersionedData> getAllInternal(VersionedDataKind<?> kind) {
+    Map<String, VersionedData> itemsOut = new HashMap<>();
     for (QueryResult result: paginateQuery(makeQueryForKind(kind))) {
       for (Map<String, AttributeValue> item: result.getItems()) {
-        T itemOut = unmarshalItem(kind, item);
+        VersionedData itemOut = unmarshalItem(kind, item);
         if (itemOut != null) {
           itemsOut.put(itemOut.getKey(), itemOut);
         }
@@ -108,7 +108,7 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
   }
 
   @Override
-  public void initInternal(Map<VersionedDataKind<?>, Map<String, ? extends VersionedData>> allData) {
+  public void initInternal(Map<VersionedDataKind<?>, Map<String, VersionedData>> allData) {
     // Start by reading the existing keys; we will later delete any of these that weren't in allData.
     Set<Map.Entry<String, String>> unusedOldKeys = readExistingKeys(allData.keySet());
       
@@ -116,7 +116,7 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
     int numItems = 0;
     
     // Insert or update every provided item
-    for (Map.Entry<VersionedDataKind<?>, Map<String, ? extends VersionedData>> entry: allData.entrySet()) {
+    for (Map.Entry<VersionedDataKind<?>, Map<String, VersionedData>> entry: allData.entrySet()) {
       VersionedDataKind<?> kind = entry.getKey();
       for (VersionedData item: entry.getValue().values()) {         
         Map<String, AttributeValue> encodedItem = marshalItem(kind, item);
@@ -152,7 +152,7 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
   }
 
   @Override
-  public <T extends VersionedData> T upsertInternal(VersionedDataKind<T> kind, T item) {
+  public VersionedData upsertInternal(VersionedDataKind<?> kind, VersionedData item) {
     Map<String, AttributeValue> encodedItem = marshalItem(kind, item);
     
     if (updateHook != null) { // instrumentation for tests
@@ -246,7 +246,7 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
     );
   }
   
-  private <T extends VersionedData> T unmarshalItem(VersionedDataKind<T> kind, Map<String, AttributeValue> item) {
+  private VersionedData unmarshalItem(VersionedDataKind<?> kind, Map<String, AttributeValue> item) {
     if (item == null || item.size() == 0) {
       return null;
     }
