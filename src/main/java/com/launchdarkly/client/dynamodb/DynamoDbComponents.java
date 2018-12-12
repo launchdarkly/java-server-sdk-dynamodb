@@ -5,7 +5,7 @@ import com.launchdarkly.client.LDConfig;
 /**
  * Entry point for using the DynamoDB feature store.
  */
-public abstract class DatabaseComponents {
+public abstract class DynamoDbComponents {
   /**
    * Creates a builder for a DynamoDB feature store. You can modify any of the store's properties with
    * {@link DynamoDbFeatureStoreBuilder} methods before adding it to your client configuration with
