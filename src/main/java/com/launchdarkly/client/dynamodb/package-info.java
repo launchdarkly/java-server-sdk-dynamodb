@@ -5,7 +5,7 @@
  * https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store
  * <p>
  * To use the DynamoDB feature store with the LaunchDarkly client, you will first obtain a
- * builder by calling {@link DatabaseComponents#dynamoDbFeatureStore(String)}, then optionally
+ * builder by calling {@link DynamoDbComponents#dynamoDbFeatureStore(String)}, then optionally
  * modify its properties, and then include it in your client configuration. For example:
  * 
  * <pre>

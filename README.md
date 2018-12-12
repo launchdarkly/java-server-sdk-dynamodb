@@ -41,7 +41,7 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
 
 5. When configuring your SDK client, add the DynamoDB feature store:
 
-        DynamoDbFeatureStoreBuilder store = DatabaseComponents.dynamoDbFeatureStore("my-table-name")
+        DynamoDbFeatureStoreBuilder store = DynamoDbComponents.dynamoDbFeatureStore("my-table-name")
             .caching(FeatureStoreCaching.enabled().ttlSeconds(30));
         
         LDConfig config = new LDConfig.Builder()
@@ -52,7 +52,7 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
 
 By default, the DynamoDB client will try to get your AWS credentials and region name from environment variables and/or local configuration files, as described in the AWS SDK documentation. There are methods in `DynamoDBFeatureStoreBuilder` for changing the configuration options. Alternatively, if you already have a fully configured DynamoDB client object, you can tell LaunchDarkly to use that:
 
-        DynamoDbFeatureStoreBuilder store = DatabaseComponents.dynamoDbFeatureStore("my-table-name")
+        DynamoDbFeatureStoreBuilder store = DynamoDbComponents.dynamoDbFeatureStore("my-table-name")
             .existingClient(myDynamoDbClientInstance);
 
 Caching behavior
@@ -60,7 +60,7 @@ Caching behavior
 
 To reduce traffic to DynamoDB, there is an optional in-memory cache that retains the last known data for a configurable amount of time. This is on by default; to turn it off (and guarantee that the latest feature flag data will always be retrieved from DynamoDB for every flag evaluation), configure the store as follows:
 
-        DynamoDbFeatureStoreBuilder store = DatabaseComponents.dynamoDbFeatureStore("my-table-name")
+        DynamoDbFeatureStoreBuilder store = DynamoDbComponents.dynamoDbFeatureStore("my-table-name")
             .caching(FeatureStoreCaching.disabled());
 
 For other ways to control the behavior of the cache, see `DynamoDbFeatureStoreBuilder.caching()`.

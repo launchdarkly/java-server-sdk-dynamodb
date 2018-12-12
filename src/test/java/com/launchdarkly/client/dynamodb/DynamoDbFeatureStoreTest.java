@@ -118,7 +118,7 @@ public class DynamoDbFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
   }
   
   private DynamoDbFeatureStoreBuilder baseBuilder() {
-    return new DynamoDbFeatureStoreBuilder(TABLE_NAME)
+    return DynamoDbComponents.dynamoDbFeatureStore(TABLE_NAME)
         .endpoint(DYNAMODB_ENDPOINT)
         .region(Region.US_EAST_1)
         .caching(cached ? FeatureStoreCaching.enabled().ttlSeconds(30) : FeatureStoreCaching.disabled())

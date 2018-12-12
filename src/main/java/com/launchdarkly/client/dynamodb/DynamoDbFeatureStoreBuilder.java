@@ -17,7 +17,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 /**
  * Builder/factory class for the DynamoDB feature store.
  * <p>
- * Create this builder by calling {@link DatabaseComponents#dynamoDbFeatureStore(String)}, then
+ * Create this builder by calling {@link DynamoDbComponents#dynamoDbFeatureStore(String)}, then
  * optionally modify its properties with builder methods, and then include it in your client
  * configuration with {@link LDConfig.Builder#featureStoreFactory(FeatureStoreFactory)}.
  * <p>
