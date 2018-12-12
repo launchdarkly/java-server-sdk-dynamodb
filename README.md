@@ -1,9 +1,9 @@
 LaunchDarkly SDK for Java - DynamoDB integration
 ================================================
 
-[![Circle CI](https://circleci.com/gh/launchdarkly/java-dynamodb-store.svg?style=shield)](https://circleci.com/gh/launchdarkly/java-dynamodb-store)
+[![Circle CI](https://circleci.com/gh/launchdarkly/java-client-dynamodb.svg?style=shield)](https://circleci.com/gh/launchdarkly/java-client-dynamodb)
 [![Javadocs](http://javadoc.io/badge/com.launchdarkly/launchdarkly-client.svg)](http://javadoc.io/doc/com.launchdarkly/launchdarkly-client-dynamodb-store)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Flaunchdarkly%2Fjava-dynamodb-store.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Flaunchdarkly%2Fjava-dynamodb-store?ref=badge_shield)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Flaunchdarkly%2Fjava-client-dynamodb.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Flaunchdarkly%2Fjava-client-dynamodb?ref=badge_shield)
 
 This library provides a DynamoDB-backed persistence mechanism (feature store) for the [LaunchDarkly Java SDK](https://github.com/launchdarkly/java-client), replacing the default in-memory feature store.
 
@@ -18,7 +18,9 @@ Quick setup
 
 This assumes that you have already installed the LaunchDarkly Java SDK.
 
-0. Add this library to your project:
+1. In DynamoDB, create a table which has the following schema: a partition key called "namespace" and a sort key called "key", both with a string type. The LaunchDarkly library does not create the table automatically, because it has no way of knowing what additional properties (such as permissions and throughput) you would want it to have.
+
+2. Add this library to your project:
 
         <dependency>
           <groupId>com.launchdarkly</groupId>
@@ -26,7 +28,7 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
           <version>1.0.0</version>
         </dependency>
 
-1. If you do not already have the AWS SDK in your project, add the DynamoDB part of it. (This needs to be added separately, rather than being included in the LaunchDarkly jar, because AWS classes are exposed in the public interface.)
+3. If you do not already have the AWS SDK in your project, add the DynamoDB part of it. (This needs to be added separately, rather than being included in the LaunchDarkly jar, because AWS classes are exposed in the public interface.)
 
         <dependency>
           <groupId>com.amazonaws</groupId>
@@ -34,12 +36,12 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
           <version>1.11.327</version>
         </dependency>
 
-2. Import the LaunchDarkly package and the package for this library:
+4. Import the LaunchDarkly package and the package for this library:
 
         import com.launchdarkly.client.*;
         import com.launchdarkly.client.dynamodb.*;
 
-3. When configuring your SDK client, add the DynamoDB feature store:
+5. When configuring your SDK client, add the DynamoDB feature store:
 
         DynamoDbFeatureStoreBuilder store = DatabaseComponents.dynamoDbFeatureStore("my-table-name")
             .caching(FeatureStoreCaching.enabled().ttlSeconds(30));
@@ -49,8 +51,6 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
             .build();
         
         LDClient client = new LDClient("YOUR SDK KEY", config);
-
-The specified table must already exist in DynamoDB. It must have a partition key called "namespace" and a sort key called "key".
 
 By default, the DynamoDB client will try to get your AWS credentials and region name from environment variables and/or local configuration files, as described in the AWS SDK documentation. There are methods in `DynamoDBFeatureStoreBuilder` for changing the configuration options. Alternatively, if you already have a fully configured DynamoDB client object, you can tell LaunchDarkly to use that:
 

@@ -134,7 +134,7 @@ nexusStaging {
 def pomConfig = {
     name 'LaunchDarkly Java SDK DynamoDB integration'
     packaging 'jar'
-    url 'https://github.com/launchdarkly/java-dynamodb-store'
+    url 'https://github.com/launchdarkly/java-client-dynamodb'
 
     licenses {
         license {
@@ -152,9 +152,9 @@ def pomConfig = {
     }
 
     scm {
-        connection 'scm:git:git://github.com/launchdarkly/java-dynamodb-store.git'
-        developerConnection 'scm:git:ssh:git@github.com:launchdarkly/java-dynamodb-store.git'
-        url 'https://github.com/launchdarkly/java-dynamodb-store'
+        connection 'scm:git:git://github.com/launchdarkly/java-client-dynamodb.git'
+        developerConnection 'scm:git:ssh:git@github.com:launchdarkly/java-client-dynamodb.git'
+        url 'https://github.com/launchdarkly/java-client-dynamodb'
     }
 }
 
