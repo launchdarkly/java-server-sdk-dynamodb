@@ -5,7 +5,7 @@
  * https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store
  * <p>
  * To use the DynamoDB feature store with the LaunchDarkly client, you will first obtain a
- * builder by calling {@link DynamoDbComponents#dynamoDbFeatureStore(String)}, then optionally
+ * builder by calling {@link com.launchdarkly.client.dynamodb.DynamoDbComponents#dynamoDbFeatureStore(String)}, then optionally
  * modify its properties, and then include it in your client configuration. For example:
  * 
  * <pre>
@@ -26,7 +26,7 @@
  * AWS credentials and region from AWS environment variables and/or local configuration files.
  * There are options in the builder for changing some configuration options, or you can
  * configure the DynamoDB client yourself and pass it to the builder with
- * {@link DynamoDbFeatureStoreBuilder#existingClient(com.amazonaws.services.dynamodbv2.AmazonDynamoDB)}.
+ * {@link com.launchdarkly.client.dynamodb.DynamoDbFeatureStoreBuilder#existingClient(com.amazonaws.services.dynamodbv2.AmazonDynamoDB)}.
  * <p>
  * If you are using the same DynamoDB table as a feature store for multiple LaunchDarkly
  * environments, use the {@link com.launchdarkly.client.dynamodb.DynamoDbFeatureStoreBuilder#prefix(String)}

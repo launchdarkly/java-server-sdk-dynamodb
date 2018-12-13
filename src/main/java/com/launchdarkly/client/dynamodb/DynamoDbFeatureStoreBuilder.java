@@ -10,7 +10,6 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.launchdarkly.client.FeatureStore;
 import com.launchdarkly.client.FeatureStoreCacheConfig;
 import com.launchdarkly.client.FeatureStoreFactory;
-import com.launchdarkly.client.LDConfig;
 import com.launchdarkly.client.utils.CachingStoreWrapper;
 
 import java.net.URI;
@@ -20,7 +19,7 @@ import java.net.URI;
  * <p>
  * Create this builder by calling {@link DynamoDbComponents#dynamoDbFeatureStore(String)}, then
  * optionally modify its properties with builder methods, and then include it in your client
- * configuration with {@link LDConfig.Builder#featureStoreFactory(FeatureStoreFactory)}.
+ * configuration with {@link com.launchdarkly.client.LDConfig.Builder#featureStoreFactory(FeatureStoreFactory)}.
  * <p>
  * The AWS SDK provides many configuration options for a DynamoDB client. This class has
  * corresponding methods for some of the most commonly used ones. If you need more sophisticated
@@ -139,7 +138,7 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
   /**
    * Specifies whether local caching should be enabled and if so, sets the cache properties. Local
    * caching is enabled by default; see {@link FeatureStoreCacheConfig#DEFAULT}. To disable it, pass
-   * {@link FeatureStoreCaching#disabled()} to this method.
+   * {@link FeatureStoreCacheConfig#disabled()} to this method.
    * 
    * @param caching a {@link FeatureStoreCacheConfig} object specifying caching parameters
    * @return the builder
