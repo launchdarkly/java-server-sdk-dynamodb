@@ -154,7 +154,7 @@ def pomConfig = {
     scm {
         connection 'scm:git:git://github.com/launchdarkly/java-client-dynamodb.git'
         developerConnection 'scm:git:ssh:git@github.com:launchdarkly/java-client-dynamodb.git'
-        url 'https://github.com/launchdarkly/java-client-dynamodb'
+        url 'https://github.com/launchdarkly/java-client-dynamodb/tree/aws-v1'
     }
 }
 
