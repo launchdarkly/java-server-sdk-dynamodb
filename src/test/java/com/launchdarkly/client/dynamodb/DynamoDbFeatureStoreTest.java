@@ -22,7 +22,7 @@ import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.amazonaws.services.dynamodbv2.model.WriteRequest;
 import com.google.common.collect.ImmutableList;
 import com.launchdarkly.client.FeatureStore;
-import com.launchdarkly.client.FeatureStoreCaching;
+import com.launchdarkly.client.FeatureStoreCacheConfig;
 import com.launchdarkly.client.FeatureStoreDatabaseTestBase;
 import com.launchdarkly.client.utils.CachingStoreWrapper;
 
@@ -128,7 +128,7 @@ public class DynamoDbFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
   private DynamoDbFeatureStoreBuilder baseBuilder() {
     return DynamoDbComponents.dynamoDbFeatureStore(TABLE_NAME)
         .endpointAndRegion(DYNAMODB_ENDPOINT, Regions.US_EAST_1.name())
-        .caching(cached ? FeatureStoreCaching.enabled().ttlSeconds(30) : FeatureStoreCaching.disabled())
+        .caching(cached ? FeatureStoreCacheConfig.enabled().ttlSeconds(30) : FeatureStoreCacheConfig.disabled())
         .credentials(getTestCredentials());
   }
   

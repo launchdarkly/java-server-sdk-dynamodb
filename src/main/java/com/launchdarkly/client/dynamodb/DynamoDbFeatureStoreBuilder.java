@@ -8,7 +8,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.launchdarkly.client.FeatureStore;
-import com.launchdarkly.client.FeatureStoreCaching;
+import com.launchdarkly.client.FeatureStoreCacheConfig;
 import com.launchdarkly.client.FeatureStoreFactory;
 import com.launchdarkly.client.LDConfig;
 import com.launchdarkly.client.utils.CachingStoreWrapper;
@@ -34,7 +34,7 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
   private AmazonDynamoDB existingClient;
   private AmazonDynamoDBClientBuilder clientBuilder;
   
-  private FeatureStoreCaching caching = FeatureStoreCaching.DEFAULT;
+  private FeatureStoreCacheConfig caching = FeatureStoreCacheConfig.DEFAULT;
   
   DynamoDbFeatureStoreBuilder(String tableName) {
     this.tableName = tableName;
@@ -45,7 +45,7 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
   public FeatureStore createFeatureStore() {  
     AmazonDynamoDB client = (existingClient != null) ? existingClient : clientBuilder.build();
     DynamoDbFeatureStoreCore core = new DynamoDbFeatureStoreCore(client, tableName, prefix);
-    CachingStoreWrapper wrapper = new CachingStoreWrapper.Builder(core).caching(caching).build();
+    CachingStoreWrapper wrapper = CachingStoreWrapper.builder(core).caching(caching).build();
     return wrapper;
   }
   
@@ -138,13 +138,13 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
   
   /**
    * Specifies whether local caching should be enabled and if so, sets the cache properties. Local
-   * caching is enabled by default; see {@link FeatureStoreCaching#DEFAULT}. To disable it, pass
+   * caching is enabled by default; see {@link FeatureStoreCacheConfig#DEFAULT}. To disable it, pass
    * {@link FeatureStoreCaching#disabled()} to this method.
    * 
-   * @param caching a {@link FeatureStoreCaching} object specifying caching parameters
+   * @param caching a {@link FeatureStoreCacheConfig} object specifying caching parameters
    * @return the builder
    */
-  public DynamoDbFeatureStoreBuilder caching(FeatureStoreCaching caching) {
+  public DynamoDbFeatureStoreBuilder caching(FeatureStoreCacheConfig caching) {
     this.caching = caching;
     return this;
   }
