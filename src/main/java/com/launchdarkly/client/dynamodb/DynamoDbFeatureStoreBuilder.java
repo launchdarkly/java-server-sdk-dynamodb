@@ -3,7 +3,6 @@ package com.launchdarkly.client.dynamodb;
 import com.launchdarkly.client.FeatureStore;
 import com.launchdarkly.client.FeatureStoreCacheConfig;
 import com.launchdarkly.client.FeatureStoreFactory;
-import com.launchdarkly.client.LDConfig;
 import com.launchdarkly.client.utils.CachingStoreWrapper;
 
 import java.net.URI;
@@ -19,7 +18,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
  * <p>
  * Create this builder by calling {@link DynamoDbComponents#dynamoDbFeatureStore(String)}, then
  * optionally modify its properties with builder methods, and then include it in your client
- * configuration with {@link LDConfig.Builder#featureStoreFactory(FeatureStoreFactory)}.
+ * configuration with {@link com.launchdarkly.client.LDConfig.Builder#featureStoreFactory(FeatureStoreFactory)}.
  * <p>
  * The AWS SDK provides many configuration options for a DynamoDB client. This class has
  * corresponding methods for some of the most commonly used ones. If you need more sophisticated
