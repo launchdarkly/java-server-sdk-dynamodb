@@ -13,7 +13,7 @@
  * import com.launchdarkly.client.dynamodb.*;
 
  * DynamoDbFeatureStoreBuilder store = DatabaseComponents.dynamoDbFeatureStore("my-table-name")
- *     .caching(FeatureStoreCaching.enabled().ttlSeconds(30));
+ *     .caching(FeatureStoreCacheConfig.enabled().ttlSeconds(30));
  * LDConfig config = new LDConfig.Builder()
  *     .featureStoreFactory(store)
  *     .build();

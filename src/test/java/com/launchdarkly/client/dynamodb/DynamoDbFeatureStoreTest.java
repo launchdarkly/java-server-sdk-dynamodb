@@ -2,7 +2,7 @@ package com.launchdarkly.client.dynamodb;
 
 import com.google.common.collect.ImmutableMap;
 import com.launchdarkly.client.FeatureStore;
-import com.launchdarkly.client.FeatureStoreCaching;
+import com.launchdarkly.client.FeatureStoreCacheConfig;
 import com.launchdarkly.client.FeatureStoreDatabaseTestBase;
 import com.launchdarkly.client.utils.CachingStoreWrapper;
 
@@ -121,7 +121,7 @@ public class DynamoDbFeatureStoreTest extends FeatureStoreDatabaseTestBase<Featu
     return DynamoDbComponents.dynamoDbFeatureStore(TABLE_NAME)
         .endpoint(DYNAMODB_ENDPOINT)
         .region(Region.US_EAST_1)
-        .caching(cached ? FeatureStoreCaching.enabled().ttlSeconds(30) : FeatureStoreCaching.disabled())
+        .caching(cached ? FeatureStoreCacheConfig.enabled().ttlSeconds(30) : FeatureStoreCacheConfig.disabled())
         .credentials(getTestCredentials());
   }
   
