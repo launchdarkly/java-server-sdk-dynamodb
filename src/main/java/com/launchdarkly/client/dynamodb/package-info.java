@@ -13,7 +13,7 @@
  * import com.launchdarkly.client.dynamodb.*;
 
  * DynamoDbFeatureStoreBuilder store = DatabaseComponents.dynamoDbFeatureStore("my-table-name")
- *     .caching(FeatureStoreCaching.enabled().ttlSeconds(30));
+ *     .caching(FeatureStoreCacheConfig.enabled().ttlSeconds(30));
  * LDConfig config = new LDConfig.Builder()
  *     .featureStoreFactory(store)
  *     .build();
@@ -26,7 +26,7 @@
  * AWS credentials and region from AWS environment variables and/or local configuration files.
  * There are options in the builder for changing some configuration options, or you can
  * configure the DynamoDB client yourself and pass it to the builder with
- * {@link DynamoDbFeatureStoreBuilder#existingClient(com.amazonaws.services.dynamodbv2.AmazonDynamoDB)}.
+ * {@link DynamoDbFeatureStoreBuilder#existingClient(software.amazon.awssdk.services.dynamodb.DynamoDbClient)}.
  * <p>
  * If you are using the same DynamoDB table as a feature store for multiple LaunchDarkly
  * environments, use the {@link com.launchdarkly.client.dynamodb.DynamoDbFeatureStoreBuilder#prefix(String)}

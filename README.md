@@ -7,9 +7,7 @@ LaunchDarkly SDK for Java - DynamoDB integration
 
 This library provides a DynamoDB-backed persistence mechanism (feature store) for the [LaunchDarkly Java SDK](https://github.com/launchdarkly/java-client), replacing the default in-memory feature store.
 
-The minimum version of the LaunchDarkly Java SDK for use with this library is 4.6.0. It is compatible with Java 7 and above.
-
-It uses version 1.11 of the AWS SDK for Java; a future release will use version 2.x.
+This library requires at least version 2.1 of the AWS SDK for Java, and at least version 4.6.0 of the LaunchDarkly Java SDK. The minimum Java version is 8 (because that is the minimum Java version of the AWS SDK 2.x).
 
 For more information, see also: [Using a persistent feature store](https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store).
 
@@ -25,15 +23,15 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
         <dependency>
           <groupId>com.launchdarkly</groupId>
           <artifactId>launchdarkly-client-dynamodb-store</artifactId>
-          <version>1.0.0</version>
+          <version>2.0.0</version>
         </dependency>
 
 3. If you do not already have the AWS SDK in your project, add the DynamoDB part of it. (This needs to be added separately, rather than being included in the LaunchDarkly jar, because AWS classes are exposed in the public interface.)
 
         <dependency>
-          <groupId>com.amazonaws</groupId>
-          <artifactId>com.amazonaws:aws-java-sdk-dynamodb</artifactId>
-          <version>1.11.327</version>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>dynamodb</artifactId>
+          <version>2.1.4</version>
         </dependency>
 
 4. Import the LaunchDarkly package and the package for this library:

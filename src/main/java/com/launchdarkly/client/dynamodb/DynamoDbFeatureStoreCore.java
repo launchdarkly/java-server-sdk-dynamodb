@@ -1,19 +1,5 @@
 package com.launchdarkly.client.dynamodb;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
-import com.amazonaws.services.dynamodbv2.model.Condition;
-import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
-import com.amazonaws.services.dynamodbv2.model.DeleteRequest;
-import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
-import com.amazonaws.services.dynamodbv2.model.GetItemResult;
-import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
-import com.amazonaws.services.dynamodbv2.model.PutRequest;
-import com.amazonaws.services.dynamodbv2.model.QueryRequest;
-import com.amazonaws.services.dynamodbv2.model.QueryResult;
-import com.amazonaws.services.dynamodbv2.model.WriteRequest;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.launchdarkly.client.VersionedData;
 import com.launchdarkly.client.VersionedDataKind;
@@ -28,10 +14,20 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ComparisonOperator;
+import software.amazon.awssdk.services.dynamodb.model.Condition;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
+import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
+import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
+import software.amazon.awssdk.services.dynamodb.paginators.QueryIterable;
 
 /**
  * Internal implementation of the DynamoDB feature store.
@@ -70,13 +66,13 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
   private static final String versionAttribute = "version";
   private static final String itemJsonAttribute = "item";
   
-  private final AmazonDynamoDB client;
+  private final DynamoDbClient client;
   private final String tableName;
   private final String prefix;
   
   private Runnable updateHook;
   
-  DynamoDbFeatureStoreCore(AmazonDynamoDB client, String tableName, String prefix) {
+  DynamoDbFeatureStoreCore(DynamoDbClient client, String tableName, String prefix) {
     this.client = client;
     this.tableName = tableName;
     this.prefix = "".equals(prefix) ? null : prefix;
@@ -84,20 +80,20 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
   
   @Override
   public void close() throws IOException {
-    client.shutdown();
+    client.close();
   }
 
   @Override
   public VersionedData getInternal(VersionedDataKind<?> kind, String key) {
-      GetItemResult result = getItemByKeys(namespaceForKind(kind), key);
-      return unmarshalItem(kind, result.getItem());
+    GetItemResponse resp = getItemByKeys(namespaceForKind(kind), key);
+    return unmarshalItem(kind, resp.item());
   }
 
   @Override
   public Map<String, VersionedData> getAllInternal(VersionedDataKind<?> kind) {
     Map<String, VersionedData> itemsOut = new HashMap<>();
-    for (QueryResult result: paginateQuery(makeQueryForKind(kind))) {
-      for (Map<String, AttributeValue> item: result.getItems()) {
+    for (QueryResponse resp: client.queryPaginator(makeQueryForKind(kind).build())) {
+      for (Map<String, AttributeValue> item: resp.items()) {
         VersionedData itemOut = unmarshalItem(kind, item);
         if (itemOut != null) {
           itemsOut.put(itemOut.getKey(), itemOut);
@@ -111,16 +107,16 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
   public void initInternal(Map<VersionedDataKind<?>, Map<String, VersionedData>> allData) {
     // Start by reading the existing keys; we will later delete any of these that weren't in allData.
     Set<Map.Entry<String, String>> unusedOldKeys = readExistingKeys(allData.keySet());
-      
+    
     List<WriteRequest> requests = new ArrayList<>();
     int numItems = 0;
     
     // Insert or update every provided item
     for (Map.Entry<VersionedDataKind<?>, Map<String, VersionedData>> entry: allData.entrySet()) {
       VersionedDataKind<?> kind = entry.getKey();
-      for (VersionedData item: entry.getValue().values()) {         
+      for (VersionedData item: entry.getValue().values()) {       
         Map<String, AttributeValue> encodedItem = marshalItem(kind, item);
-        requests.add(new WriteRequest(new PutRequest(encodedItem)));
+        requests.add(WriteRequest.builder().putRequest(builder -> builder.item(encodedItem)).build());
         
         Map.Entry<String, String> combinedKey = new AbstractMap.SimpleEntry<>(
             namespaceForKind(kind), item.getKey());
@@ -134,17 +130,17 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
     for (Map.Entry<String, String> combinedKey: unusedOldKeys) {
       if (!combinedKey.getKey().equals(initedKey())) {
         Map<String, AttributeValue> keys = ImmutableMap.of(
-            partitionKey, new AttributeValue(combinedKey.getKey()),
-            sortKey, new AttributeValue(combinedKey.getValue()));
-        requests.add(new WriteRequest(new DeleteRequest(keys)));
+            partitionKey, AttributeValue.builder().s(combinedKey.getKey()).build(),
+            sortKey, AttributeValue.builder().s(combinedKey.getValue()).build());
+        requests.add(WriteRequest.builder().deleteRequest(builder -> builder.key(keys)).build());
       }
     }
     
     // Now set the special key that we check in initializedInternal()
     Map<String, AttributeValue> initedItem = ImmutableMap.of(
-      partitionKey, new AttributeValue(initedKey()),
-      sortKey, new AttributeValue(initedKey()));
-    requests.add(new WriteRequest(new PutRequest(initedItem)));
+        partitionKey, AttributeValue.builder().s(initedKey()).build(),
+        sortKey, AttributeValue.builder().s(initedKey()).build());
+    requests.add(WriteRequest.builder().putRequest(builder -> builder.item(initedItem)).build());
     
     batchWriteRequests(client, tableName, requests);
     
@@ -160,13 +156,16 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
     }
     
     try {
-      PutItemRequest put = new PutItemRequest(tableName, encodedItem);
-      put.setConditionExpression("attribute_not_exists(#namespace) or attribute_not_exists(#key) or :version > #version");
-      put.addExpressionAttributeNamesEntry("#namespace", partitionKey);
-      put.addExpressionAttributeNamesEntry("#key", sortKey);
-      put.addExpressionAttributeNamesEntry("#version", versionAttribute);
-      put.addExpressionAttributeValuesEntry(":version", new AttributeValue().withN(String.valueOf(item.getVersion())));
-      client.putItem(put);
+      client.putItem(builder -> builder.tableName(tableName)
+          .item(encodedItem)
+          .conditionExpression("attribute_not_exists(#namespace) or attribute_not_exists(#key) or :version > #version")
+          .expressionAttributeNames(ImmutableMap.of(
+              "#namespace", partitionKey,
+              "#key", sortKey,
+              "#version", versionAttribute))
+          .expressionAttributeValues(ImmutableMap.of(
+              ":version", AttributeValue.builder().n(String.valueOf(item.getVersion())).build()))
+      );
     } catch (ConditionalCheckFailedException e) {
       // The item was not updated because there's a newer item in the database.
       // We must now read the item that's in the database and return it, so CachingStoreWrapper can cache it.
@@ -178,8 +177,8 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
 
   @Override
   public boolean initializedInternal() {
-    GetItemResult result = getItemByKeys(initedKey(), initedKey());
-    return result.getItem() != null && result.getItem().size() > 0;
+    GetItemResponse resp = getItemByKeys(initedKey(), initedKey());
+    return resp.item() != null && resp.item().size() > 0;
   }
   
   public void setUpdateHook(Runnable updateHook) {
@@ -197,38 +196,45 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
   private String initedKey() {
     return prefixedNamespace("$inited");
   }
-  
-  private QueryRequest makeQueryForKind(VersionedDataKind<?> kind) {
-    Condition cond = new Condition();
-    cond.setComparisonOperator(ComparisonOperator.EQ);
-    cond.setAttributeValueList(ImmutableList.of(new AttributeValue(namespaceForKind(kind))));
 
-    QueryRequest req = new QueryRequest(tableName);
-    req.setConsistentRead(true);
-    req.addKeyConditionsEntry(partitionKey, cond);
-    return req;
+  private QueryRequest.Builder makeQueryForKind(VersionedDataKind<?> kind) {
+    Map<String, Condition> keyConditions = ImmutableMap.of(
+        partitionKey,
+        Condition.builder()
+          .comparisonOperator(ComparisonOperator.EQ)
+          .attributeValueList(AttributeValue.builder().s(namespaceForKind(kind)).build())
+          .build()
+    );
+    return QueryRequest.builder()
+        .tableName(tableName)
+        .consistentRead(true)
+        .keyConditions(keyConditions);
   }
   
-  private GetItemResult getItemByKeys(String namespace, String key) {
+  private GetItemResponse getItemByKeys(String namespace, String key) {
     Map<String, AttributeValue> keyMap = ImmutableMap.of(
-        partitionKey, new AttributeValue(namespace),
-        sortKey, new AttributeValue(key)
+        partitionKey, AttributeValue.builder().s(namespace).build(),
+        sortKey, AttributeValue.builder().s(key).build()
     );
-    GetItemRequest req = new GetItemRequest(tableName, keyMap, true);
-    return client.getItem(req);
+    return client.getItem(builder -> builder.tableName(tableName)
+        .consistentRead(true)
+        .key(keyMap)
+    );
   }
   
   private Set<Map.Entry<String, String>> readExistingKeys(Iterable<VersionedDataKind<?>> kinds) {
     Set<Map.Entry<String, String>> keys = new HashSet<>();
     for (VersionedDataKind<?> kind: kinds) {
-      QueryRequest req = makeQueryForKind(kind);
-      req.setProjectionExpression("#namespace, #key");
-      req.addExpressionAttributeNamesEntry("#namespace", partitionKey);
-      req.addExpressionAttributeNamesEntry("#key", sortKey);
-      for (QueryResult result: paginateQuery(req)) {
-        for (Map<String, AttributeValue> item: result.getItems()) {
-          String namespace = item.get(partitionKey).getS();
-          String key = item.get(sortKey).getS();
+      QueryRequest req = makeQueryForKind(kind)
+        .projectionExpression("#namespace, #key")
+        .expressionAttributeNames(ImmutableMap.of(
+            "#namespace", partitionKey, "#key", sortKey))
+        .build();
+      QueryIterable queryResults = client.queryPaginator(req);
+      for (QueryResponse resp: queryResults) {
+        for (Map<String, AttributeValue> item: resp.items()) {
+          String namespace = item.get(partitionKey).s();
+          String key = item.get(sortKey).s();
           keys.add(new AbstractMap.SimpleEntry<>(namespace, key));
         }
       }
@@ -239,10 +245,10 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
   private Map<String, AttributeValue> marshalItem(VersionedDataKind<?> kind, VersionedData item) {
     String json = FeatureStoreHelpers.marshalJson(item);
     return ImmutableMap.of(
-      partitionKey, new AttributeValue(namespaceForKind(kind)),
-      sortKey, new AttributeValue(item.getKey()),
-      versionAttribute, new AttributeValue().withN(String.valueOf(item.getVersion())),
-      itemJsonAttribute, new AttributeValue(json)
+        partitionKey, AttributeValue.builder().s(namespaceForKind(kind)).build(),
+        sortKey, AttributeValue.builder().s(item.getKey()).build(),
+        versionAttribute, AttributeValue.builder().n(String.valueOf(item.getVersion())).build(),
+        itemJsonAttribute, AttributeValue.builder().s(json).build()
     );
   }
   
@@ -251,55 +257,19 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
       return null;
     }
     AttributeValue jsonAttr = item.get(itemJsonAttribute);
-    if (jsonAttr == null || jsonAttr.getS() == null) {
+    if (jsonAttr == null || jsonAttr.s() == null) {
       throw new IllegalStateException("DynamoDB map did not contain expected item string");
     }
-    return FeatureStoreHelpers.unmarshalJson(kind, jsonAttr.getS());
+    return FeatureStoreHelpers.unmarshalJson(kind, jsonAttr.s());
   }
   
-  Iterable<QueryResult> paginateQuery(final QueryRequest request) {
-    return new Iterable<QueryResult>() {
-      public Iterator<QueryResult> iterator() {
-        return new QueryIterator(request);
-      }
-    };
-  }
-  
-  private class QueryIterator implements Iterator<QueryResult> {
-    private boolean eof;
-    private final QueryRequest request;
-    
-    QueryIterator(QueryRequest request) {
-      this.request = request;
-    }
-    
-    @Override
-    public boolean hasNext() {
-      return !eof;
-    }
-  
-    @Override
-    public QueryResult next() {
-      if (eof) {
-        return null;
-      }
-      QueryResult result = client.query(request);
-      if (result.getLastEvaluatedKey() != null) {
-        request.setExclusiveStartKey(result.getLastEvaluatedKey());
-      } else {
-        eof = true;
-      }
-      return result;
-    }
-  }
-  
-  static void batchWriteRequests(AmazonDynamoDB client, String tableName, List<WriteRequest> requests) {
+  static void batchWriteRequests(DynamoDbClient client, String tableName, List<WriteRequest> requests) {
     int batchSize = 25;
     for (int i = 0; i < requests.size(); i += batchSize) {
       int limit = (i + batchSize < requests.size()) ? (i + batchSize) : requests.size();
       List<WriteRequest> batch = requests.subList(i, limit); 
       Map<String, List<WriteRequest>> batchMap = ImmutableMap.of(tableName, batch);
-      client.batchWriteItem(batchMap);
+      client.batchWriteItem(builder -> builder.requestItems(batchMap));
     }
   }
 }
