@@ -1,9 +1,9 @@
 LaunchDarkly SDK for Java - DynamoDB integration
 ================================================
 
-[![Circle CI](https://circleci.com/gh/launchdarkly/java-client-dynamodb.svg?style=shield)](https://circleci.com/gh/launchdarkly/java-client-dynamodb)
+[![Circle CI](https://circleci.com/gh/launchdarkly/java-server-sdk-dynamodb.svg?style=shield)](https://circleci.com/gh/launchdarkly/java-server-sdk-dynamodb)
 [![Javadocs](http://javadoc.io/badge/com.launchdarkly/launchdarkly-client.svg)](http://javadoc.io/doc/com.launchdarkly/launchdarkly-client-dynamodb-store)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Flaunchdarkly%2Fjava-client-dynamodb.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Flaunchdarkly%2Fjava-client-dynamodb?ref=badge_shield)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Flaunchdarkly%2Fjava-server-sdk-dynamodb.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Flaunchdarkly%2Fjava-server-sdk-dynamodb?ref=badge_shield)
 
 This library provides a DynamoDB-backed persistence mechanism (feature store) for the [LaunchDarkly Java SDK](https://github.com/launchdarkly/java-client), replacing the default in-memory feature store.
 
