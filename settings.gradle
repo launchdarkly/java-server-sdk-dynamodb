@@ -1,4 +1,4 @@
-rootProject.name = 'launchdarkly-client-dynamodb-store'
+rootProject.name = 'launchdarkly-java-server-sdk-dynamodb-store'
 
 // enable in preparation for Gradle 5.0
 enableFeaturePreview('STABLE_PUBLISHING')
