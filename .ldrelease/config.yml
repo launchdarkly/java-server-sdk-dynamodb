@@ -13,6 +13,8 @@ publications:
 
 template:
   name: gradle
+  skip:
+    - test  # Running the unit tests would require installing DynamoDB. They've already been run in CI.
 
 documentation:
   githubPages: true
