@@ -1,0 +1,18 @@
+
+releasableBranches:
+  - name: master
+    description: uses AWS 2.x, requires Java 8+
+  - name: aws-v1
+    description: uses AWS 1.x, allows Java 7
+
+publications:
+  - url: https://oss.sonatype.org/content/groups/public/com/launchdarkly/launchdarkly-java-server-sdk-dynamodb-store/
+    description: Sonatype
+  - url: https://javadoc.io/doc/com.launchdarkly/launchdarkly-java-server-sdk-dynamodb-store
+    description: documentation (javadoc.io)
+
+template:
+  name: gradle
+
+documentation:
+  githubPages: true
