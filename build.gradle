@@ -192,3 +192,14 @@ publishing {
 signing {
     sign publishing.publications.shadow
 }
+
+githubPages {
+    repoUri = 'https://github.com/launchdarkly/java-server-sdk-dynamodb.git'
+    pages {
+        from javadoc
+    }
+    credentials {
+        username = githubUser
+        password = githubPassword
+    }
+}

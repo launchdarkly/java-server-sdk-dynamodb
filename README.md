@@ -7,6 +7,8 @@ This library provides a DynamoDB-backed persistence mechanism (feature store) fo
 
 This version of the library requires at least version 2.1 of the AWS SDK for Java, and at least version 4.6.4 of the LaunchDarkly Java SDK. The minimum Java version is 8 (because that is the minimum Java version of the AWS SDK 2.x). If you need to use Java 7, or if you are already using AWS SDK 1.x for some other purpose, you can use the 1.x releases of this library (which are developed on the "aws-v1" branch of the repository).
 
+See the [API documentation](https://launchdarkly.github.io/java-server-sdk-dynamodb) for details on classes and methods.
+
 For more information, see also: [Using a persistent feature store](https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store).
 
 ## Quick setup
