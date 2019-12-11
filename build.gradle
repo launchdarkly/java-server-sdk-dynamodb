@@ -44,7 +44,7 @@ libraries.internal = [
 // in the uberjar; the caller must provide them on the classpath at runtime.
 libraries.external = [
     "com.launchdarkly:launchdarkly-java-server-sdk:4.6.4",
-    "software.amazon.awssdk:dynamodb:2.1.4",
+    "software.amazon.awssdk:dynamodb:2.10.32",
     "org.slf4j:slf4j-api:1.7.21"
 ]
 
