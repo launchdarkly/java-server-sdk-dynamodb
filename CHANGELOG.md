@@ -2,6 +2,10 @@
 
 All notable changes to the LaunchDarkly Java SDK DynamoDB integration will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [2.0.2] - 2019-12-11
+### Changed:
+- Updated the AWS SDK DynamoDB dependency to version 2.10.32. Your application can always specify its own desired version of the dependency; this is just the version that is used for building the library.
+
 ## [2.0.1] - 2019-05-13
 ### Changed:
 - Corresponding to the SDK package name change from `com.launchdarkly:launchdarkly-client` to `com.launchdarkly:launchdarkly-java-server-sdk`, this package is now called `com.launchdarkly:launchdarkly-java-server-sdk-dynamodb-store`. The functionality of the package, including the package names and class names in the code, has not changed.
