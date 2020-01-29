@@ -16,7 +16,7 @@ public abstract class DynamoDbComponents {
    * @param tableName The table name in DynamoDB. This table must already exist (see package
    * documentation).
    * @return the builder
-   * @deprecated Use {@link com.launchdarkly.client.integrations.DynamoDb#dataStore()}
+   * @deprecated Use {@link com.launchdarkly.client.integrations.DynamoDb#dataStore(String)}
    */
   @Deprecated
   public static DynamoDbFeatureStoreBuilder dynamoDbFeatureStore(String tableName) {

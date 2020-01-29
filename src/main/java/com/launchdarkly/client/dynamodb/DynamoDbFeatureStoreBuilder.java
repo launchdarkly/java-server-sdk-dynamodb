@@ -24,7 +24,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
  * This class is retained for backward compatibility with older Java SDK versions and will be removed in a
  * future version. 
  * 
- * @deprecated Use {@link com.launchdarkly.client.integrations.DynamoDb#dataStore()}
+ * @deprecated Use {@link com.launchdarkly.client.integrations.DynamoDb#dataStore(String)}
  */
 @Deprecated
 public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory, DiagnosticDescription {

@@ -86,6 +86,13 @@ public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<Dynam
     return true;
   }
   
+  static DynamoDbDataStoreBuilder baseBuilder() {
+    return DynamoDb.dataStore(TABLE_NAME)
+        .endpoint(DYNAMODB_ENDPOINT)
+        .region(Region.US_EAST_1)
+        .credentials(DynamoDbDataStoreImplTest.getTestCredentials());
+  }
+  
   // visible for use by deprecated tests
   static void createTableIfNecessary() {
     DynamoDbClient client = createTestClient();
