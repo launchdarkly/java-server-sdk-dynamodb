@@ -7,6 +7,8 @@ import com.launchdarkly.client.dynamodb.DynamoDbComponents;
 import com.launchdarkly.client.dynamodb.DynamoDbFeatureStoreBuilder;
 import com.launchdarkly.client.utils.CachingStoreWrapper;
 
+import org.junit.BeforeClass;
+
 import java.net.URI;
 
 import software.amazon.awssdk.regions.Region;
@@ -26,10 +28,13 @@ public class DeprecatedDynamoDbFeatureStoreTest extends FeatureStoreDatabaseTest
   private static final String TABLE_NAME = "LD_DYNAMODB_TEST_TABLE";
   private static final URI DYNAMODB_ENDPOINT = URI.create("http://localhost:8000");
 
+  @BeforeClass
+  public static void setUpAll() {
+    DynamoDbDataStoreImplTest.createTableIfNecessary();
+  }
+  
   public DeprecatedDynamoDbFeatureStoreTest(boolean cached) {
     super(cached);
-    
-    DynamoDbDataStoreImplTest.createTableIfNecessary();
   }
   
   @Override

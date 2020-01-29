@@ -2,6 +2,8 @@ package com.launchdarkly.client.integrations;
 
 import com.google.common.collect.ImmutableMap;
 
+import org.junit.BeforeClass;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +44,11 @@ import software.amazon.awssdk.services.dynamodb.paginators.ScanIterable;
 public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<DynamoDbDataStoreImpl> {
   private static final String TABLE_NAME = "LD_DYNAMODB_TEST_TABLE";
   private static final URI DYNAMODB_ENDPOINT = URI.create("http://localhost:8000");
+  
+  @BeforeClass
+  public static void setUpAll() {
+    createTableIfNecessary();
+  }
   
   @Override
   protected DynamoDbDataStoreImpl makeStore() {
