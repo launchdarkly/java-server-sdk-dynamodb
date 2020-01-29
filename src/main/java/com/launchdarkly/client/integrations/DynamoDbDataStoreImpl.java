@@ -1,4 +1,4 @@
-package com.launchdarkly.client.dynamodb;
+package com.launchdarkly.client.integrations;
 
 import com.google.common.collect.ImmutableMap;
 import com.launchdarkly.client.VersionedData;
@@ -58,8 +58,8 @@ import software.amazon.awssdk.services.dynamodb.paginators.QueryIterable;
  * stored as a single item, this mechanism will not work for extremely large flags or segments.
  * </ul>
  */
-class DynamoDbFeatureStoreCore implements FeatureStoreCore {
-  private static final Logger logger = LoggerFactory.getLogger(DynamoDbFeatureStoreCore.class);
+class DynamoDbDataStoreImpl implements FeatureStoreCore {
+  private static final Logger logger = LoggerFactory.getLogger(DynamoDbDataStoreImpl.class);
   
   static final String partitionKey = "namespace";
   static final String sortKey = "key";
@@ -72,7 +72,7 @@ class DynamoDbFeatureStoreCore implements FeatureStoreCore {
   
   private Runnable updateHook;
   
-  DynamoDbFeatureStoreCore(DynamoDbClient client, String tableName, String prefix) {
+  DynamoDbDataStoreImpl(DynamoDbClient client, String tableName, String prefix) {
     this.client = client;
     this.tableName = tableName;
     this.prefix = "".equals(prefix) ? null : prefix;

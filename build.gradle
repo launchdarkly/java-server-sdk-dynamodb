@@ -44,7 +44,7 @@ libraries.internal = [
 // global state that must be shared between the SDK and the caller. These are not embedded
 // in the uberjar; the caller must provide them on the classpath at runtime.
 libraries.external = [
-    "com.launchdarkly:launchdarkly-java-server-sdk:4.6.4",
+    "com.launchdarkly:launchdarkly-java-server-sdk:4.12.0-SNAPSHOT",
     "software.amazon.awssdk:dynamodb:2.10.32",
     "org.slf4j:slf4j-api:1.7.21"
 ]
@@ -54,7 +54,7 @@ libraries.test = [
     "org.hamcrest:hamcrest-all:1.3",
     "junit:junit:4.12",
     "ch.qos.logback:logback-classic:1.1.7",
-    "com.launchdarkly:launchdarkly-java-server-sdk:4.6.4:test" // our unit tests use helper classes from the SDK
+    "com.launchdarkly:launchdarkly-java-server-sdk:4.12.0-SNAPSHOT:test" // our unit tests use helper classes from the SDK
 ]
 
 dependencies {
