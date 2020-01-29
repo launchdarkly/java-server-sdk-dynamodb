@@ -45,12 +45,12 @@ public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<Dynam
   
   @Override
   protected DynamoDbDataStoreImpl makeStore() {
-    return (DynamoDbDataStoreImpl)DynamoDb.dataStore(TABLE_NAME).createPersistentDataStore();
+    return (DynamoDbDataStoreImpl)baseBuilder().createPersistentDataStore();
   }
   
   @Override
   protected DynamoDbDataStoreImpl makeStoreWithPrefix(String prefix) {
-    return (DynamoDbDataStoreImpl)DynamoDb.dataStore(TABLE_NAME).prefix(prefix).createPersistentDataStore();
+    return (DynamoDbDataStoreImpl)baseBuilder().prefix(prefix).createPersistentDataStore();
   }
   
   @Override
