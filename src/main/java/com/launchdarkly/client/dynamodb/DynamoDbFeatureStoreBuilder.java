@@ -18,7 +18,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 /**
- * Deprecated builder class for the Redis-based persistent data store.
+ * Deprecated builder class for the DynamoDB-based persistent data store.
  * <p>
  * The replacement for this class is {@link com.launchdarkly.client.integrations.DynamoDb}.
  * This class is retained for backward compatibility with older Java SDK versions and will be removed in a
