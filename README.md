@@ -3,13 +3,13 @@
 [![Circle CI](https://circleci.com/gh/launchdarkly/java-server-sdk-dynamodb.svg?style=shield)](https://circleci.com/gh/launchdarkly/java-server-sdk-dynamodb)
 [![Javadocs](http://javadoc.io/badge/com.launchdarkly/launchdarkly-java-server-sdk-dynamodb-store.svg)](http://javadoc.io/doc/com.launchdarkly/launchdarkly-java-server-sdk-dynamodb-store)
 
-This library provides a DynamoDB-backed persistence mechanism (feature store) for the [LaunchDarkly Java SDK](https://github.com/launchdarkly/java-server-sdk), replacing the default in-memory feature store.
+This library provides a DynamoDB-backed persistence mechanism (data store) for the [LaunchDarkly Java SDK](https://github.com/launchdarkly/java-server-sdk), replacing the default in-memory data store.
 
-This version of the library requires at least version 2.1 of the AWS SDK for Java, and at least version 4.6.4 of the LaunchDarkly Java SDK. The minimum Java version is 8 (because that is the minimum Java version of the AWS SDK 2.x). If you need to use Java 7, or if you are already using AWS SDK 1.x for some other purpose, you can use the 1.x releases of this library (which are developed on the "aws-v1" branch of the repository).
+This version of the library requires at least version 2.1 of the AWS SDK for Java, and at least version 4.12.0 of the LaunchDarkly Java SDK. The minimum Java version is 8 (because that is the minimum Java version of the AWS SDK 2.x). If you need to use Java 7, or if you are already using AWS SDK 1.x for some other purpose, you can use the 1.x releases of this library (which are developed on the "aws-v1" branch of the repository).
 
 See the [API documentation](https://launchdarkly.github.io/java-server-sdk-dynamodb) for details on classes and methods.
 
-For more information, see also: [Using a persistent feature store](https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store).
+For more information, see also: [Using a persistent data store](https://docs.launchdarkly.com/v2.0/docs/using-a-persistent-feature-store).
 
 ## Quick setup
 
@@ -36,32 +36,42 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
 4. Import the LaunchDarkly package and the package for this library:
 
         import com.launchdarkly.client.*;
-        import com.launchdarkly.client.dynamodb.*;
+        import com.launchdarkly.client.integrations.*;
 
 5. When configuring your SDK client, add the DynamoDB feature store:
 
-        DynamoDbFeatureStoreBuilder store = DynamoDbComponents.dynamoDbFeatureStore("my-table-name")
-            .caching(FeatureStoreCacheConfig.enabled().ttlSeconds(30));
+        DynamoDbDataStoreBuilder dynamoDbStore = DynamoDb.dataStore("my-table-name");
         
         LDConfig config = new LDConfig.Builder()
-            .featureStoreFactory(store)
+            .dataStore(Components.persistentDataStore(dynamoDbStore))
             .build();
         
         LDClient client = new LDClient("YOUR SDK KEY", config);
 
-By default, the DynamoDB client will try to get your AWS credentials and region name from environment variables and/or local configuration files, as described in the AWS SDK documentation. There are methods in `DynamoDBFeatureStoreBuilder` for changing the configuration options. Alternatively, if you already have a fully configured DynamoDB client object, you can tell LaunchDarkly to use that:
+By default, the DynamoDB client will try to get your AWS credentials and region name from environment variables and/or local configuration files, as described in the AWS SDK documentation. There are methods in `DynamoDbDataStoreBuilder` for changing the configuration options. Alternatively, if you already have a fully configured DynamoDB client object, you can tell LaunchDarkly to use that:
 
-        DynamoDbFeatureStoreBuilder store = DynamoDbComponents.dynamoDbFeatureStore("my-table-name")
+        DynamoDbDataStoreBuilder dynamoDbStore = DynamoDb.dataStore("my-table-name")
             .existingClient(myDynamoDbClientInstance);
 
 ## Caching behavior
 
 To reduce traffic to DynamoDB, there is an optional in-memory cache that retains the last known data for a configurable amount of time. This is on by default; to turn it off (and guarantee that the latest feature flag data will always be retrieved from DynamoDB for every flag evaluation), configure the store as follows:
 
-        DynamoDbFeatureStoreBuilder store = DynamoDbComponents.dynamoDbFeatureStore("my-table-name")
-            .caching(FeatureStoreCacheConfig.disabled());
+By default, for any persistent data store, the Java SDK uses an in-memory cache to reduce traffic to the database; this retains the last known data for a configurable amount of time. To change the caching behavior or disable caching, use the `PersistentDataStoreBuilder` methods:
 
-For other ways to control the behavior of the cache, see `DynamoDbFeatureStoreBuilder.caching()`.
+        LDConfig configWithLongerCacheTtl = new LDConfig.Builder()
+            .dataStore(
+                Components.persistentDataStore(dynamoDbStore).cacheSeconds(60)
+            )
+            .build();
+
+        LDConfig configWithNoCaching = new LDConfig.Builder()
+            .dataStore(
+                Components.persistentDataStore(dynamoDbStore).noCaching()
+            )
+            .build();
+
+For other ways to control the behavior of the cache, see `PersistentDataStoreBuilder` in the Java SDK.
 
 ## About LaunchDarkly
  

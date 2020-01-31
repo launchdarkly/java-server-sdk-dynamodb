@@ -1,9 +1,14 @@
 package com.launchdarkly.client.dynamodb;
 
+import com.launchdarkly.client.Components;
 import com.launchdarkly.client.FeatureStore;
 import com.launchdarkly.client.FeatureStoreCacheConfig;
 import com.launchdarkly.client.FeatureStoreFactory;
-import com.launchdarkly.client.utils.CachingStoreWrapper;
+import com.launchdarkly.client.LDConfig;
+import com.launchdarkly.client.integrations.DynamoDbDataStoreBuilder;
+import com.launchdarkly.client.integrations.PersistentDataStoreBuilder;
+import com.launchdarkly.client.interfaces.DiagnosticDescription;
+import com.launchdarkly.client.value.LDValue;
 
 import java.net.URI;
 
@@ -11,40 +16,29 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 
 /**
- * Builder/factory class for the DynamoDB feature store.
+ * Deprecated builder class for the DynamoDB-based persistent data store.
  * <p>
- * Create this builder by calling {@link DynamoDbComponents#dynamoDbFeatureStore(String)}, then
- * optionally modify its properties with builder methods, and then include it in your client
- * configuration with {@link com.launchdarkly.client.LDConfig.Builder#featureStoreFactory(FeatureStoreFactory)}.
- * <p>
- * The AWS SDK provides many configuration options for a DynamoDB client. This class has
- * corresponding methods for some of the most commonly used ones. If you need more sophisticated
- * control over the DynamoDB client, you can construct one of your own and pass it in with the
- * {@link #existingClient(DynamoDbClient)} method.
+ * The replacement for this class is {@link com.launchdarkly.client.integrations.DynamoDb}.
+ * This class is retained for backward compatibility with older Java SDK versions and will be removed in a
+ * future version. 
+ * 
+ * @deprecated Use {@link com.launchdarkly.client.integrations.DynamoDb#dataStore(String)}
  */
-public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
-  private final String tableName;
-  
-  private String prefix;
-  private DynamoDbClient existingClient;
-  private DynamoDbClientBuilder clientBuilder;
-  
-  private FeatureStoreCacheConfig caching = FeatureStoreCacheConfig.DEFAULT;
+@Deprecated
+public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory, DiagnosticDescription {
+  private final PersistentDataStoreBuilder wrappedOuterBuilder;
+  private final DynamoDbDataStoreBuilder wrappedBuilder;
   
   DynamoDbFeatureStoreBuilder(String tableName) {
-    this.tableName = tableName;
-    clientBuilder = DynamoDbClient.builder();
+    wrappedBuilder = com.launchdarkly.client.integrations.DynamoDb.dataStore(tableName);
+    wrappedOuterBuilder = Components.persistentDataStore(wrappedBuilder);
   }
   
   @Override
-  public FeatureStore createFeatureStore() {  
-    DynamoDbClient client = (existingClient != null) ? existingClient : clientBuilder.build();
-    DynamoDbFeatureStoreCore core = new DynamoDbFeatureStoreCore(client, tableName, prefix);
-    CachingStoreWrapper wrapper = CachingStoreWrapper.builder(core).caching(caching).build();
-    return wrapper;
+  public FeatureStore createFeatureStore() {
+    return wrappedOuterBuilder.createFeatureStore();
   }
   
   /**
@@ -54,7 +48,7 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
    * @return the builder
    */
   public DynamoDbFeatureStoreBuilder clientOverrideConfiguration(ClientOverrideConfiguration config) {
-    clientBuilder.overrideConfiguration(config);
+    wrappedBuilder.clientOverrideConfiguration(config);
     return this;
   }
   
@@ -66,7 +60,7 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
    * @return the builder
    */
   public DynamoDbFeatureStoreBuilder credentials(AwsCredentialsProvider credentialsProvider) {
-    clientBuilder.credentialsProvider(credentialsProvider);
+    wrappedBuilder.credentials(credentialsProvider);
     return this;
   }
   
@@ -79,7 +73,7 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
    * @return the builder
    */
   public DynamoDbFeatureStoreBuilder endpoint(URI endpointUri) {
-    clientBuilder.endpointOverride(endpointUri);
+    wrappedBuilder.endpoint(endpointUri);
     return this;
   }
   
@@ -91,7 +85,7 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
    * @return the builder
    */
   public DynamoDbFeatureStoreBuilder region(Region region) {
-    clientBuilder.region(region);
+    wrappedBuilder.region(region);
     return this;
   }
 
@@ -104,7 +98,7 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
    * @return the builder
    */
   public DynamoDbFeatureStoreBuilder prefix(String prefix) {
-    this.prefix = prefix;
+    wrappedBuilder.prefix(prefix);
     return this;
   }
 
@@ -117,7 +111,7 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
    * @return the builder
    */
   public DynamoDbFeatureStoreBuilder existingClient(DynamoDbClient existingClient) {
-    this.existingClient = existingClient;
+    wrappedBuilder.existingClient(existingClient);
     return this;
   }
   
@@ -130,7 +124,13 @@ public class DynamoDbFeatureStoreBuilder implements FeatureStoreFactory {
    * @return the builder
    */
   public DynamoDbFeatureStoreBuilder caching(FeatureStoreCacheConfig caching) {
-    this.caching = caching;
+    wrappedOuterBuilder.cacheTime(caching.getCacheTime(), caching.getCacheTimeUnit());
+    wrappedOuterBuilder.staleValuesPolicy(caching.getStaleValuesPolicy().toNewEnum());
     return this;
+  }
+
+  @Override
+  public LDValue describeConfiguration(LDConfig config) {
+    return LDValue.of("DynamoDB");
   }
 }
