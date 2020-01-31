@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Java SDK DynamoDB integration will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [2.1.0] - 2020-01-30
+### Added:
+- New classes `com.launchdarkly.client.integrations.DynamoDb` and `com.launchdarkly.client.integrations.DynamoDbDataStoreBuilder`, which serve the same purpose as the previous classes but are designed to work with the newer persistent data store API introduced in [Java SDK 4.12.0](https://github.com/launchdarkly/java-server-sdk/releases/tag/4.12.0).
+
+### Deprecated:
+- The old interface in the `com.launchdarkly.client.integrations.dynamodb` package.
+
 ## [2.0.2] - 2019-12-11
 ### Changed:
 - Updated the AWS SDK DynamoDB dependency to version 2.10.32. Your application can always specify its own desired version of the dependency; this is just the version that is used for building the library.
