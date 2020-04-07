@@ -1,7 +1,9 @@
 
 releasableBranches:
   - name: master
-    description: uses AWS 2.x, requires Java 8+
+    description: 3.x - for Java SDK 5.0+, uses AWS 2.x
+  - name: 2.x
+    description: for Java SDK 4.x, uses AWS 2.x
   - name: aws-v1
     description: uses AWS 1.x, allows Java 7
 
