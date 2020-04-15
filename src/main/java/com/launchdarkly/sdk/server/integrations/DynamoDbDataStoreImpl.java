@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.launchdarkly.sdk.server.DataModel.ALL_DATA_KINDS;
 import static com.launchdarkly.sdk.server.integrations.CollectionHelpers.mapOf;
 
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -113,7 +112,7 @@ final class DynamoDbDataStoreImpl implements PersistentDataStore {
   @Override
   public void init(FullDataSet<SerializedItemDescriptor> allData) {
     // Start by reading the existing keys; we will later delete any of these that weren't in allData.
-    Set<Map.Entry<String, String>> unusedOldKeys = readExistingKeys(ALL_DATA_KINDS);
+    Set<Map.Entry<String, String>> unusedOldKeys = readExistingKeys(allData);
     
     List<WriteRequest> requests = new ArrayList<>();
     int numItems = 0;
@@ -238,9 +237,10 @@ final class DynamoDbDataStoreImpl implements PersistentDataStore {
     );
   }
   
-  private Set<Map.Entry<String, String>> readExistingKeys(Iterable<DataKind> kinds) {
+  private Set<Map.Entry<String, String>> readExistingKeys(FullDataSet<?> kindsFromThisDataSet) {
     Set<Map.Entry<String, String>> keys = new HashSet<>();
-    for (DataKind kind: kinds) {
+    for (Map.Entry<DataKind, ?> e: kindsFromThisDataSet.getData()) {
+      DataKind kind = e.getKey();
       QueryRequest req = makeQueryForKind(kind)
         .projectionExpression("#namespace, #key")
         .expressionAttributeNames(mapOf(
