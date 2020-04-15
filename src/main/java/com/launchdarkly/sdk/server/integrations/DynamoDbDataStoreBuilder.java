@@ -1,12 +1,11 @@
-package com.launchdarkly.client.integrations;
+package com.launchdarkly.sdk.server.integrations;
 
-import com.launchdarkly.client.FeatureStoreFactory;
-import com.launchdarkly.client.LDConfig;
-import com.launchdarkly.client.dynamodb.DynamoDbComponents;
-import com.launchdarkly.client.interfaces.DiagnosticDescription;
-import com.launchdarkly.client.interfaces.PersistentDataStoreFactory;
-import com.launchdarkly.client.utils.FeatureStoreCore;
-import com.launchdarkly.client.value.LDValue;
+import com.launchdarkly.sdk.LDValue;
+import com.launchdarkly.sdk.server.LDConfig;
+import com.launchdarkly.sdk.server.interfaces.ClientContext;
+import com.launchdarkly.sdk.server.interfaces.DiagnosticDescription;
+import com.launchdarkly.sdk.server.interfaces.PersistentDataStore;
+import com.launchdarkly.sdk.server.interfaces.PersistentDataStoreFactory;
 
 import java.net.URI;
 
@@ -30,8 +29,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
  * 
  * @since 2.1.0
  */
-@SuppressWarnings("deprecation")
-public class DynamoDbDataStoreBuilder implements PersistentDataStoreFactory, DiagnosticDescription {
+public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactory, DiagnosticDescription {
   private final String tableName;
   
   private String prefix;
@@ -41,12 +39,6 @@ public class DynamoDbDataStoreBuilder implements PersistentDataStoreFactory, Dia
   DynamoDbDataStoreBuilder(String tableName) {
     this.tableName = tableName;
     clientBuilder = DynamoDbClient.builder();
-  }
-  
-  @Override
-  public FeatureStoreCore createPersistentDataStore() {  
-    DynamoDbClient client = (existingClient != null) ? existingClient : clientBuilder.build();
-    return new DynamoDbDataStoreImpl(client, tableName, prefix);
   }
   
   /**
@@ -121,6 +113,16 @@ public class DynamoDbDataStoreBuilder implements PersistentDataStoreFactory, Dia
   public DynamoDbDataStoreBuilder existingClient(DynamoDbClient existingClient) {
     this.existingClient = existingClient;
     return this;
+  }
+
+  /**
+   * Called internally by the SDK to create the actual data store instance.
+   * @return the data store configured by this builder
+   */
+  @Override
+  public PersistentDataStore createPersistentDataStore(ClientContext context) {  
+    DynamoDbClient client = (existingClient != null) ? existingClient : clientBuilder.build();
+    return new DynamoDbDataStoreImpl(client, tableName, prefix);
   }
 
   @Override

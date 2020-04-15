@@ -1,4 +1,4 @@
-package com.launchdarkly.client.integrations;
+package com.launchdarkly.sdk.server.integrations;
 
 /**
  * Integration between the LaunchDarkly SDK and DynamoDB.

@@ -5,7 +5,9 @@
 
 This library provides a DynamoDB-backed persistence mechanism (data store) for the [LaunchDarkly Java SDK](https://github.com/launchdarkly/java-server-sdk), replacing the default in-memory data store.
 
-This version of the library is for use with LaunchDarkly Java SDK versions greater than or equal to 4.12.0 and less than 5.0; for Java SDK 5.0 and above, the minimum version of this library is 3.0. It requires at least version 2.1 of the AWS SDK for Java. The minimum Java version is 8 (because that is the minimum Java version of the AWS SDK 2.x). If you need to use Java 7, or if you are already using AWS SDK 1.x for some other purpose, you can use the 1.x releases of this library (which are developed on the "aws-v1" branch of the repository).
+This version of the library requires at least version 5.0.0 of the LaunchDarkly Java SDK, and at least version 2.1 of the AWS SDK for Java. The minimum Java version is 8. For Java SDK 4.x, use the latest 2.x version of this library.
+
+If you need to use Java 7, or if you are already using AWS SDK 1.x for some other purpose, you can use the 1.x releases of this library (which are developed on the "aws-v1" branch of the repository).
 
 See the [API documentation](https://launchdarkly.github.io/java-server-sdk-dynamodb) for details on classes and methods.
 
@@ -22,7 +24,7 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
         <dependency>
           <groupId>com.launchdarkly</groupId>
           <artifactId>launchdarkly-java-server-sdk-dynamodb-store</artifactId>
-          <version>2.1.0</version>
+          <version>3.0.0</version>
         </dependency>
 
 3. If you do not already have the AWS SDK in your project, add the DynamoDB part of it. (This needs to be added separately, rather than being included in the LaunchDarkly jar, because AWS classes are exposed in the public interface.)
@@ -35,43 +37,36 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
 
 4. Import the LaunchDarkly package and the package for this library:
 
-        import com.launchdarkly.client.*;
-        import com.launchdarkly.client.integrations.*;
+        import com.launchdarkly.sdk.server.*;
+        import com.launchdarkly.sdk.server.integrations.*;
 
 5. When configuring your SDK client, add the DynamoDB feature store:
 
-        DynamoDbDataStoreBuilder dynamoDbStore = DynamoDb.dataStore("my-table-name");
-        
         LDConfig config = new LDConfig.Builder()
-            .dataStore(Components.persistentDataStore(dynamoDbStore))
+            .dataStore(
+                Components.persistentDataStore(
+                    DynamoDb.dataStore("my-table-name")
+                )
+            )
             .build();
-        
-        LDClient client = new LDClient("YOUR SDK KEY", config);
 
 By default, the DynamoDB client will try to get your AWS credentials and region name from environment variables and/or local configuration files, as described in the AWS SDK documentation. There are methods in `DynamoDbDataStoreBuilder` for changing the configuration options. Alternatively, if you already have a fully configured DynamoDB client object, you can tell LaunchDarkly to use that:
 
-        DynamoDbDataStoreBuilder dynamoDbStore = DynamoDb.dataStore("my-table-name")
-            .existingClient(myDynamoDbClientInstance);
+                Components.persistentDataStore(
+                    DynamoDb.dataStore("my-table-name").existingClient(myDynamoDbClientInstance)
+                )
 
 ## Caching behavior
 
-To reduce traffic to DynamoDB, there is an optional in-memory cache that retains the last known data for a configurable amount of time. This is on by default; to turn it off (and guarantee that the latest feature flag data will always be retrieved from DynamoDB for every flag evaluation), configure the store as follows:
+The LaunchDarkly SDK has a standard caching mechanism for any persistent data store, to reduce database traffic. This is configured through the SDK's `PersistentDataStoreBuilder` class as described the SDK documentation. For instance, to specify a cache TTL of 5 minutes:
 
-By default, for any persistent data store, the Java SDK uses an in-memory cache to reduce traffic to the database; this retains the last known data for a configurable amount of time. To change the caching behavior or disable caching, use the `PersistentDataStoreBuilder` methods:
-
-        LDConfig configWithLongerCacheTtl = new LDConfig.Builder()
+        LDConfig config = new LDConfig.Builder()
             .dataStore(
-                Components.persistentDataStore(dynamoDbStore).cacheSeconds(60)
+                Components.persistentDataStore(
+                    DynamoDb.dataStore("my-table-name")
+                ).cacheTime(Duration.ofMinutes(5))
             )
             .build();
-
-        LDConfig configWithNoCaching = new LDConfig.Builder()
-            .dataStore(
-                Components.persistentDataStore(dynamoDbStore).noCaching()
-            )
-            .build();
-
-For other ways to control the behavior of the cache, see `PersistentDataStoreBuilder` in the Java SDK.
 
 ## About LaunchDarkly
  
