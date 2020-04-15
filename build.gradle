@@ -68,15 +68,6 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
     from javadoc.destinationDir
 }
 
-shadowJar {
-    // No classifier means that the shaded jar becomes the default artifact
-    classifier = ''
-
-    manifest {
-        attributes("Implementation-Version": version)
-    }
-}
-
 artifacts {
     archives sourcesJar, javadocJar
 }
