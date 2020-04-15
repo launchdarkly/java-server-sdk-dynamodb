@@ -19,7 +19,7 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
 
 1. In DynamoDB, create a table which has the following schema: a partition key called "namespace" and a sort key called "key", both with a string type. The LaunchDarkly library does not create the table automatically, because it has no way of knowing what additional properties (such as permissions and throughput) you would want it to have.
 
-2. Add this library to your project:
+2. Add this library to your project (updating the version number to use the [latest release](https://github.com/launchdarkly/java-server-sdk-dynamodb/releases)):
 
         <dependency>
           <groupId>com.launchdarkly</groupId>
