@@ -2,9 +2,6 @@ package com.launchdarkly.sdk.server.integrations;
 
 /**
  * Integration between the LaunchDarkly SDK and DynamoDB.
- * <p>
- * This API uses the persistent data store model that was introduced in version 4.12.0 of the LaunchDarkly Java SDK.
- * If you are using an older Java SDK version, use {@link com.launchdarkly.client.dynamodb.DynamoDbComponents}.
  *
  * @since 2.1.0
  */
@@ -14,9 +11,9 @@ public abstract class DynamoDb {
    * <p>
    * This object can be modified with {@link DynamoDbDataStoreBuilder} methods for any desired
    * custom DynamoDB options. Then, pass it to
-   * {@link com.launchdarkly.client.Components#persistentDataStore(com.launchdarkly.client.interfaces.PersistentDataStoreFactory)}
+   * {@link com.launchdarkly.sdk.server.Components#persistentDataStore(com.launchdarkly.sdk.server.interfaces.PersistentDataStoreFactory)}
    * and set any desired caching options. Finally, pass the result to
-   * {@link com.launchdarkly.client.LDConfig.Builder#dataStore(com.launchdarkly.client.FeatureStoreFactory)}.
+   * {@link com.launchdarkly.sdk.server.LDConfig.Builder#dataStore(com.launchdarkly.sdk.server.interfaces.DataStoreFactory)}.
    * For example:
    * 
    * <pre><code>
@@ -38,7 +35,7 @@ public abstract class DynamoDb {
    * configure the DynamoDB client yourself and pass it to the builder with
    * {@link DynamoDbDataStoreBuilder#existingClient(software.amazon.awssdk.services.dynamodb.DynamoDbClient)}.
    * <p>
-   * If you are using the same DynamoDB table as a feature store for multiple LaunchDarkly
+   * If you are using the same DynamoDB table as a data store for multiple LaunchDarkly
    * environments, use the {@link DynamoDbDataStoreBuilder#prefix(String)} option and choose a 
    * different prefix string for each, so they will not interfere with each other's data.
    *  

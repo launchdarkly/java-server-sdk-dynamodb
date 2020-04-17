@@ -16,11 +16,15 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 
 /**
- * Builder/factory class for the DynamoDB feature store.
+ * Builder/factory class for the DynamoDB data store.
  * <p>
- * Create this builder by calling {@link DynamoDbComponents#dynamoDbFeatureStore(String)}, then
- * optionally modify its properties with builder methods, and then include it in your client
- * configuration with {@link com.launchdarkly.client.LDConfig.Builder#featureStoreFactory(FeatureStoreFactory)}.
+ * Obtain an instance of this class by calling {@link com.launchdarkly.sdk.server.integrations.DynamoDb#dataStore(String)}.
+ * After calling its methods to specify any desired custom settings, wrap it in a
+ * {@link com.launchdarkly.sdk.server.integrations.PersistentDataStoreBuilder}
+ * by calling {@code Components.persistentDataStore()}, then pass the result into the SDK configuration with
+ * {@link com.launchdarkly.sdk.server.LDConfig.Builder#dataStore(com.launchdarkly.sdk.server.interfaces.DataStoreFactory)}.
+ * You do not need to call {@link #createPersistentDataStore(ClientContext)} yourself to build the actual data store; that
+ * will be done by the SDK.
  * <p>
  * The AWS SDK provides many configuration options for a DynamoDB client. This class has
  * corresponding methods for some of the most commonly used ones. If you need more sophisticated
@@ -103,7 +107,7 @@ public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactor
   }
 
   /**
-   * Specifies an existing, already-configured DynamoDB client instance that the feature store
+   * Specifies an existing, already-configured DynamoDB client instance that the data store
    * should use rather than creating one of its own. If you specify an existing client, then the
    * other builder methods for configuring DynamoDB are ignored.
    *  

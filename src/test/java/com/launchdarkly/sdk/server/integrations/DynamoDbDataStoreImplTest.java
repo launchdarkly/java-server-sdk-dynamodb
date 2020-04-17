@@ -31,7 +31,7 @@ import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 import software.amazon.awssdk.services.dynamodb.paginators.ScanIterable;
 
 /**
- * Runs the standard database feature store test suite that's defined in the Java SDK.
+ * Runs the standard database data store test suite that's defined in the Java SDK.
  * <p>
  * Note that you must be running a local DynamoDB instance on port 8000 to run these tests.
  * The simplest way to do this is:

@@ -31,7 +31,7 @@ import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 import software.amazon.awssdk.services.dynamodb.paginators.QueryIterable;
 
 /**
- * Internal implementation of the DynamoDB feature store.
+ * Internal implementation of the DynamoDB data store.
  * <p>
  * Implementation notes:
  * <ul>
