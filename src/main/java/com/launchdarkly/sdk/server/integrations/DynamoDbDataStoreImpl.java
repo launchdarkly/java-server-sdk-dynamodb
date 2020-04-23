@@ -1,10 +1,10 @@
-package com.launchdarkly.client.integrations;
+package com.launchdarkly.sdk.server.integrations;
 
-import com.google.common.collect.ImmutableMap;
-import com.launchdarkly.client.VersionedData;
-import com.launchdarkly.client.VersionedDataKind;
-import com.launchdarkly.client.utils.FeatureStoreCore;
-import com.launchdarkly.client.utils.FeatureStoreHelpers;
+import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.DataKind;
+import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.FullDataSet;
+import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.KeyedItems;
+import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.SerializedItemDescriptor;
+import com.launchdarkly.sdk.server.interfaces.PersistentDataStore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,11 +12,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static com.launchdarkly.sdk.server.integrations.CollectionHelpers.mapOf;
 
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -30,7 +31,7 @@ import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 import software.amazon.awssdk.services.dynamodb.paginators.QueryIterable;
 
 /**
- * Internal implementation of the DynamoDB feature store.
+ * Internal implementation of the DynamoDB data store.
  * <p>
  * Implementation notes:
  * <ul>
@@ -58,14 +59,14 @@ import software.amazon.awssdk.services.dynamodb.paginators.QueryIterable;
  * stored as a single item, this mechanism will not work for extremely large flags or segments.
  * </ul>
  */
-class DynamoDbDataStoreImpl implements FeatureStoreCore {
+final class DynamoDbDataStoreImpl implements PersistentDataStore {
   private static final Logger logger = LoggerFactory.getLogger(DynamoDbDataStoreImpl.class);
   
   static final String partitionKey = "namespace";
   static final String sortKey = "key";
   private static final String versionAttribute = "version";
   private static final String itemJsonAttribute = "item";
-  
+  private static final String deletedItemPlaceholder = "null"; // DynamoDB doesn't allow empty strings
   private final DynamoDbClient client;
   private final String tableName;
   private final String prefix;
@@ -84,42 +85,47 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
   }
 
   @Override
-  public VersionedData getInternal(VersionedDataKind<?> kind, String key) {
+  public SerializedItemDescriptor get(DataKind kind, String key) {
     GetItemResponse resp = getItemByKeys(namespaceForKind(kind), key);
     return unmarshalItem(kind, resp.item());
   }
 
   @Override
-  public Map<String, VersionedData> getAllInternal(VersionedDataKind<?> kind) {
-    Map<String, VersionedData> itemsOut = new HashMap<>();
+  public KeyedItems<SerializedItemDescriptor> getAll(DataKind kind) {
+    List<Map.Entry<String, SerializedItemDescriptor>> itemsOut = new ArrayList<>();
     for (QueryResponse resp: client.queryPaginator(makeQueryForKind(kind).build())) {
       for (Map<String, AttributeValue> item: resp.items()) {
-        VersionedData itemOut = unmarshalItem(kind, item);
-        if (itemOut != null) {
-          itemsOut.put(itemOut.getKey(), itemOut);
+        AttributeValue keyAttr = item.get(sortKey);
+        if (keyAttr == null || keyAttr.s() == null) {
+          
+        } else {
+          SerializedItemDescriptor itemOut = unmarshalItem(kind, item);
+          if (itemOut != null) {
+            itemsOut.add(new AbstractMap.SimpleEntry<>(keyAttr.s(), itemOut));
+          }
         }
       }
     }
-    return itemsOut;
+    return new KeyedItems<>(itemsOut);
   }
 
   @Override
-  public void initInternal(Map<VersionedDataKind<?>, Map<String, VersionedData>> allData) {
+  public void init(FullDataSet<SerializedItemDescriptor> allData) {
     // Start by reading the existing keys; we will later delete any of these that weren't in allData.
-    Set<Map.Entry<String, String>> unusedOldKeys = readExistingKeys(allData.keySet());
+    Set<Map.Entry<String, String>> unusedOldKeys = readExistingKeys(allData);
     
     List<WriteRequest> requests = new ArrayList<>();
     int numItems = 0;
     
     // Insert or update every provided item
-    for (Map.Entry<VersionedDataKind<?>, Map<String, VersionedData>> entry: allData.entrySet()) {
-      VersionedDataKind<?> kind = entry.getKey();
-      for (VersionedData item: entry.getValue().values()) {       
-        Map<String, AttributeValue> encodedItem = marshalItem(kind, item);
+    for (Map.Entry<DataKind, KeyedItems<SerializedItemDescriptor>> entry: allData.getData()) {
+      DataKind kind = entry.getKey();
+      for (Map.Entry<String, SerializedItemDescriptor> itemEntry: entry.getValue().getItems()) {
+        String key = itemEntry.getKey();
+        Map<String, AttributeValue> encodedItem = marshalItem(kind, key, itemEntry.getValue());
         requests.add(WriteRequest.builder().putRequest(builder -> builder.item(encodedItem)).build());
         
-        Map.Entry<String, String> combinedKey = new AbstractMap.SimpleEntry<>(
-            namespaceForKind(kind), item.getKey());
+        Map.Entry<String, String> combinedKey = new AbstractMap.SimpleEntry<>(namespaceForKind(kind), key);
         unusedOldKeys.remove(combinedKey);
         
         numItems++;
@@ -129,7 +135,7 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
     // Now delete any previously existing items whose keys were not in the current data
     for (Map.Entry<String, String> combinedKey: unusedOldKeys) {
       if (!combinedKey.getKey().equals(initedKey())) {
-        Map<String, AttributeValue> keys = ImmutableMap.of(
+        Map<String, AttributeValue> keys = mapOf(
             partitionKey, AttributeValue.builder().s(combinedKey.getKey()).build(),
             sortKey, AttributeValue.builder().s(combinedKey.getValue()).build());
         requests.add(WriteRequest.builder().deleteRequest(builder -> builder.key(keys)).build());
@@ -137,7 +143,7 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
     }
     
     // Now set the special key that we check in initializedInternal()
-    Map<String, AttributeValue> initedItem = ImmutableMap.of(
+    Map<String, AttributeValue> initedItem = mapOf(
         partitionKey, AttributeValue.builder().s(initedKey()).build(),
         sortKey, AttributeValue.builder().s(initedKey()).build());
     requests.add(WriteRequest.builder().putRequest(builder -> builder.item(initedItem)).build());
@@ -148,8 +154,8 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
   }
 
   @Override
-  public VersionedData upsertInternal(VersionedDataKind<?> kind, VersionedData item) {
-    Map<String, AttributeValue> encodedItem = marshalItem(kind, item);
+  public boolean upsert(DataKind kind, String key, SerializedItemDescriptor newItem) {
+    Map<String, AttributeValue> encodedItem = marshalItem(kind, key, newItem);
     
     if (updateHook != null) { // instrumentation for tests
       updateHook.run();
@@ -159,26 +165,35 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
       client.putItem(builder -> builder.tableName(tableName)
           .item(encodedItem)
           .conditionExpression("attribute_not_exists(#namespace) or attribute_not_exists(#key) or :version > #version")
-          .expressionAttributeNames(ImmutableMap.of(
+          .expressionAttributeNames(mapOf(
               "#namespace", partitionKey,
               "#key", sortKey,
               "#version", versionAttribute))
-          .expressionAttributeValues(ImmutableMap.of(
-              ":version", AttributeValue.builder().n(String.valueOf(item.getVersion())).build()))
+          .expressionAttributeValues(mapOf(
+              ":version", AttributeValue.builder().n(String.valueOf(newItem.getVersion())).build()))
       );
     } catch (ConditionalCheckFailedException e) {
       // The item was not updated because there's a newer item in the database.
-      // We must now read the item that's in the database and return it, so CachingStoreWrapper can cache it.
-      return getInternal(kind, item.getKey());
+      return false;
     }
     
-    return item;
+    return true;
   }
 
   @Override
-  public boolean initializedInternal() {
+  public boolean isInitialized() {
     GetItemResponse resp = getItemByKeys(initedKey(), initedKey());
     return resp.item() != null && resp.item().size() > 0;
+  }
+
+  //@Override
+  public boolean isStoreAvailable() {
+    try {
+      isInitialized(); // don't care about the return value, just that it doesn't throw an exception
+      return true;
+    } catch (Exception e) { // don't care about exception class, since any exception means the DynamoDB request couldn't be made
+      return false;
+    }
   }
   
   public void setUpdateHook(Runnable updateHook) {
@@ -189,16 +204,16 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
     return prefix == null ? base : (prefix + ":" + base);
   }
   
-  private String namespaceForKind(VersionedDataKind<?> kind) {
-    return prefixedNamespace(kind.getNamespace());
+  private String namespaceForKind(DataKind kind) {
+    return prefixedNamespace(kind.getName());
   }
   
   private String initedKey() {
     return prefixedNamespace("$inited");
   }
 
-  private QueryRequest.Builder makeQueryForKind(VersionedDataKind<?> kind) {
-    Map<String, Condition> keyConditions = ImmutableMap.of(
+  private QueryRequest.Builder makeQueryForKind(DataKind kind) {
+    Map<String, Condition> keyConditions = mapOf(
         partitionKey,
         Condition.builder()
           .comparisonOperator(ComparisonOperator.EQ)
@@ -212,7 +227,7 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
   }
   
   private GetItemResponse getItemByKeys(String namespace, String key) {
-    Map<String, AttributeValue> keyMap = ImmutableMap.of(
+    Map<String, AttributeValue> keyMap = mapOf(
         partitionKey, AttributeValue.builder().s(namespace).build(),
         sortKey, AttributeValue.builder().s(key).build()
     );
@@ -222,12 +237,13 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
     );
   }
   
-  private Set<Map.Entry<String, String>> readExistingKeys(Iterable<VersionedDataKind<?>> kinds) {
+  private Set<Map.Entry<String, String>> readExistingKeys(FullDataSet<?> kindsFromThisDataSet) {
     Set<Map.Entry<String, String>> keys = new HashSet<>();
-    for (VersionedDataKind<?> kind: kinds) {
+    for (Map.Entry<DataKind, ?> e: kindsFromThisDataSet.getData()) {
+      DataKind kind = e.getKey();
       QueryRequest req = makeQueryForKind(kind)
         .projectionExpression("#namespace, #key")
-        .expressionAttributeNames(ImmutableMap.of(
+        .expressionAttributeNames(mapOf(
             "#namespace", partitionKey, "#key", sortKey))
         .build();
       QueryIterable queryResults = client.queryPaginator(req);
@@ -242,17 +258,17 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
     return keys;
   }
   
-  private Map<String, AttributeValue> marshalItem(VersionedDataKind<?> kind, VersionedData item) {
-    String json = FeatureStoreHelpers.marshalJson(item);
-    return ImmutableMap.of(
+  private Map<String, AttributeValue> marshalItem(DataKind kind, String key, SerializedItemDescriptor item) {
+    String json = item.isDeleted() ? deletedItemPlaceholder : item.getSerializedItem();
+    return mapOf(
         partitionKey, AttributeValue.builder().s(namespaceForKind(kind)).build(),
-        sortKey, AttributeValue.builder().s(item.getKey()).build(),
+        sortKey, AttributeValue.builder().s(key).build(),
         versionAttribute, AttributeValue.builder().n(String.valueOf(item.getVersion())).build(),
         itemJsonAttribute, AttributeValue.builder().s(json).build()
     );
   }
   
-  private VersionedData unmarshalItem(VersionedDataKind<?> kind, Map<String, AttributeValue> item) {
+  private SerializedItemDescriptor unmarshalItem(DataKind kind, Map<String, AttributeValue> item) {
     if (item == null || item.size() == 0) {
       return null;
     }
@@ -260,7 +276,21 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
     if (jsonAttr == null || jsonAttr.s() == null) {
       throw new IllegalStateException("DynamoDB map did not contain expected item string");
     }
-    return FeatureStoreHelpers.unmarshalJson(kind, jsonAttr.s());
+    String jsonValue = jsonAttr.s();
+    AttributeValue versionAttr = item.get(versionAttribute);
+    if (versionAttr == null || versionAttr.n() == null) {
+      throw new IllegalStateException("DynamoDB map did not contain expected version attribute");
+    }
+    int version;
+    try {
+      version = Integer.parseInt(versionAttr.n());
+    } catch (NumberFormatException e) {
+      throw new IllegalStateException("DynamoDB version attribute had a non-numeric value");
+    }
+    if (jsonValue.equals(deletedItemPlaceholder)) {
+      return new SerializedItemDescriptor(version, true, null);
+    }
+    return new SerializedItemDescriptor(version, false, jsonValue);
   }
   
   static void batchWriteRequests(DynamoDbClient client, String tableName, List<WriteRequest> requests) {
@@ -268,7 +298,7 @@ class DynamoDbDataStoreImpl implements FeatureStoreCore {
     for (int i = 0; i < requests.size(); i += batchSize) {
       int limit = (i + batchSize < requests.size()) ? (i + batchSize) : requests.size();
       List<WriteRequest> batch = requests.subList(i, limit); 
-      Map<String, List<WriteRequest>> batchMap = ImmutableMap.of(tableName, batch);
+      Map<String, List<WriteRequest>> batchMap = mapOf(tableName, batch);
       client.batchWriteItem(builder -> builder.requestItems(batchMap));
     }
   }

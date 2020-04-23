@@ -11,15 +11,12 @@ plugins {
     id "java-library"
     id "checkstyle"
     id "signing"
-    id "com.github.johnrengelman.shadow" version "4.0.4"
     id "maven-publish"
     id "de.marcphilipp.nexus-publish" version "0.3.0"
     id "io.codearte.nexus-staging" version "0.21.2"
     id "org.ajoberstar.git-publish" version "2.1.3"
     id "idea"
 }
-
-import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
 
 configurations.all {
     // check for updates every build for dependencies with: 'changing: true'
@@ -36,49 +33,29 @@ repositories {
 allprojects {
     group = 'com.launchdarkly'
     version = "${version}"
+    archivesBaseName = 'launchdarkly-java-server-sdk-dynamodb-store'
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 }
 
-ext {
-    sdkBasePackage = "com.launchdarkly.client.dynamodb"
-    sdkBaseName = "launchdarkly-java-server-sdk-dynamodb-store"
-}
+ext.versions = [
+    "sdk": "5.0.0-SNAPSHOT", // the *lowest* version we're compatible with
+    "dynamodb": "2.10.32",
+    "slf4j": "1.7.21"
+]
 
 ext.libraries = [:]
 
-// Add dependencies to "libraries.internal" that are not exposed in our public API. These
-// will be embedded with shaded names in the uberjar.
-libraries.internal = [
-    "com.google.guava:guava:19.0"
-]
-
-// Add dependencies to "libraries.external" that are exposed in our public API, or that have
-// global state that must be shared between the SDK and the caller. These are not embedded
-// in the uberjar; the caller must provide them on the classpath at runtime.
-libraries.external = [
-    "com.launchdarkly:launchdarkly-java-server-sdk:4.12.0",
-    "software.amazon.awssdk:dynamodb:2.10.32",
-    "org.slf4j:slf4j-api:1.7.21"
-]
-
-// Add dependencies to "libraries.test" that are used only in unit tests.
-libraries.test = [
-    "org.hamcrest:hamcrest-all:1.3",
-    "junit:junit:4.12",
-    "ch.qos.logback:logback-classic:1.1.7",
-    "com.launchdarkly:launchdarkly-java-server-sdk:4.12.0:test" // our unit tests use helper classes from the SDK
-]
-
 dependencies {
-    implementation libraries.internal
-    compileClasspath libraries.external
-    runtime libraries.internal
-    testImplementation libraries.test, libraries.internal, libraries.external
-
-    // Unlike what the name might suggest, the "shadow" configuration specifies dependencies that
-    // should *not* be shaded by the Shadow plugin when we build our shaded jars.
-    shadow libraries.external
+    api "com.launchdarkly:launchdarkly-java-server-sdk:${versions.sdk}"
+    api "software.amazon.awssdk:dynamodb:${versions.dynamodb}"
+    api "org.slf4j:slf4j-api:${versions.slf4j}"
+    testCompile "org.hamcrest:hamcrest-all:1.3"
+    testCompile "junit:junit:4.12"
+    testCompile "com.launchdarkly:launchdarkly-java-server-sdk:${versions.sdk}:test" // our unit tests use helper classes from the SDK
+    testRuntime "ch.qos.logback:logback-classic:1.1.7"
+    testRuntime "com.google.guava:guava:28.2-jre" // required by SDK tests, not used in this library itself
+    testRuntime "com.google.code.gson:gson:2.7" // same as above
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
@@ -91,26 +68,8 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
     from javadoc.destinationDir
 }
 
-shadowJar {
-    baseName = sdkBaseName
-    
-    // No classifier means that the shaded jar becomes the default artifact
-    classifier = ''
-
-    manifest {
-        attributes("Implementation-Version": version)
-    }
-}
-
-task relocateShadowJar(type: ConfigureShadowRelocation) {
-    target = tasks.shadowJar
-    prefix = "com.launchdarkly.shaded"
-}
-
-tasks.shadowJar.dependsOn tasks.relocateShadowJar
-
 artifacts {
-    archives sourcesJar, javadocJar, shadowJar
+    archives sourcesJar, javadocJar
 }
 
 test {
@@ -133,59 +92,37 @@ nexusStaging {
     numberOfRetries = 40 // we've seen extremely long delays in closing repositories
 }
 
-def pomConfig = {
-    name 'LaunchDarkly Java SDK DynamoDB integration'
-    packaging 'jar'
-    url 'https://github.com/launchdarkly/java-server-sdk-dynamodb'
-
-    licenses {
-        license {
-            name 'The Apache License, Version 2.0'
-            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-        }
-    }
-
-    developers {
-        developer {
-            id 'jkodumal'
-            name 'John Kodumal'
-            email 'john@launchdarkly.com'
-        }
-    }
-
-    scm {
-        connection 'scm:git:git://github.com/launchdarkly/java-server-sdk-dynamodb.git'
-        developerConnection 'scm:git:ssh:git@github.com:launchdarkly/java-server-sdk-dynamodb.git'
-        url 'https://github.com/launchdarkly/java-server-sdk-dynamodb'
-    }
-}
-
 publishing {
     publications {
-        shadow(MavenPublication) { publication ->
-            project.shadow.component(publication)
+        mavenJava(MavenPublication) {
+            from components.java
 
-            artifactId = sdkBaseName
+            groupId = 'com.launchdarkly'
+            artifactId = project.archivesBaseName
+            
             artifact sourcesJar
             artifact javadocJar
             
-            pom.withXml {
-                def root = asNode()
-                root.appendNode('description', 'DynamoDB-backed data store for the LaunchDarkly Java SDK')
-
-                // The following workaround is for a known issue where the Shadow plugin assumes that all
-                // non-shaded dependencies should have "runtime" scope rather than "compile".
-                //    https://github.com/johnrengelman/shadow/issues/321
-                // Currently there doesn't seem to be any way way around this other than simply hacking the
-                // pom at this point after it has been generated by Shadow. All of the dependencies that
-                // are in the pom at this point should have compile scope.
-                def dependenciesNode = root.getAt('dependencies').get(0)
-                dependenciesNode.each { dependencyNode ->
-                    def scopeNode = dependencyNode.getAt('scope').get(0)
-                    scopeNode.setValue('compile')
+            pom {
+                name = project.archivesBaseName
+                description = 'LaunchDarkly Java SDK DynamoDB integration'
+                url = 'https://github.com/launchdarkly/java-server-sdk-dynamodb'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
                 }
-
-                root.children().last() + pomConfig
+                developers {
+                    developer {
+                        name = 'LaunchDarkly'
+                        email = 'team@launchdarkly.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/launchdarkly/java-server-sdk-dynamodb.git'
+                    developerConnection = 'scm:git:ssh:git@github.com:launchdarkly/java-server-sdk-dynamodb.git'
+                }
             }
         }
     }
@@ -205,7 +142,11 @@ nexusPublishing {
 }
 
 signing {
-    sign publishing.publications.shadow
+    sign publishing.publications.mavenJava
+}
+
+tasks.withType(Sign) {
+    onlyIf { !"1".equals(project.findProperty("LD_SKIP_SIGNING")) } // so we can build jars for testing in CI
 }
 
 gitPublish {

@@ -1,13 +1,17 @@
-version: 2
+version: 2.1
+
+orbs:
+   win: circleci/windows@1.0.0
 
 workflows:
   version: 2
   test:
     jobs:
-      - build
+      - build-test-linux
+      - build-test-windows
 
 jobs:
-  build:
+  build-test-linux:
     docker:
       - image: circleci/java
       - image: amazon/dynamodb-local
@@ -25,3 +29,43 @@ jobs:
           path: ~/junit
       - store_artifacts:
           path: ~/junit
+
+  build-test-windows:
+    executor:
+      name: win/vs2019
+      shell: powershell.exe
+    steps:
+      - checkout
+      - run:
+          name: install OpenJDK
+          command: |
+            $ProgressPreference = "SilentlyContinue"  # prevents console errors from CircleCI host
+            iwr -outf openjdk.msi https://developers.redhat.com/download-manager/file/java-11-openjdk-11.0.5.10-2.windows.redhat.x86_64.msi
+            Start-Process msiexec.exe -Wait -ArgumentList '/I openjdk.msi /quiet'
+      - run:
+          name: set up DynamoDB
+          command: |
+            $ProgressPreference = "SilentlyContinue"
+            iwr -outf dynamo.zip https://s3-us-west-2.amazonaws.com/dynamodb-local/dynamodb_local_latest.zip
+            mkdir dynamo
+            Expand-Archive -Path dynamo.zip -DestinationPath dynamo
+      - run:
+          name: run DynamoDB
+          command: |
+            cd dynamo
+            javaw -D"java.library.path=./DynamoDBLocal_lib" -jar DynamoDBLocal.jar
+          background: true
+      - run:
+          name: build and test
+          command: |
+            cp gradle.properties.example gradle.properties
+            .\gradlew.bat --no-daemon test  # must use --no-daemon because CircleCI in Windows will hang if there's a daemon running
+      - run:
+          name: save test results
+          command: |
+            mkdir .\junit
+            cp build/test-results/test/*.xml junit
+      - store_test_results:
+          path: .\junit
+      - store_artifacts:
+          path: .\junit

@@ -1,6 +1,4 @@
-package com.launchdarkly.client.integrations;
-
-import com.google.common.collect.ImmutableMap;
+package com.launchdarkly.sdk.server.integrations;
 
 import org.junit.BeforeClass;
 
@@ -9,8 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static com.launchdarkly.client.integrations.DynamoDbDataStoreImpl.partitionKey;
-import static com.launchdarkly.client.integrations.DynamoDbDataStoreImpl.sortKey;
+import static com.launchdarkly.sdk.server.integrations.CollectionHelpers.mapOf;
+import static com.launchdarkly.sdk.server.integrations.DynamoDbDataStoreImpl.partitionKey;
+import static com.launchdarkly.sdk.server.integrations.DynamoDbDataStoreImpl.sortKey;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -32,7 +31,7 @@ import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 import software.amazon.awssdk.services.dynamodb.paginators.ScanIterable;
 
 /**
- * Runs the standard database feature store test suite that's defined in the Java SDK.
+ * Runs the standard database data store test suite that's defined in the Java SDK.
  * <p>
  * Note that you must be running a local DynamoDB instance on port 8000 to run these tests.
  * The simplest way to do this is:
@@ -52,12 +51,12 @@ public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<Dynam
   
   @Override
   protected DynamoDbDataStoreImpl makeStore() {
-    return (DynamoDbDataStoreImpl)baseBuilder().createPersistentDataStore();
+    return (DynamoDbDataStoreImpl)baseBuilder().createPersistentDataStore(null);
   }
   
   @Override
   protected DynamoDbDataStoreImpl makeStoreWithPrefix(String prefix) {
-    return (DynamoDbDataStoreImpl)baseBuilder().prefix(prefix).createPersistentDataStore();
+    return (DynamoDbDataStoreImpl)baseBuilder().prefix(prefix).createPersistentDataStore(null);
   }
   
   @Override
@@ -74,7 +73,7 @@ public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<Dynam
     ScanIterable results = client.scanPaginator(builder -> builder.tableName(TABLE_NAME)
         .consistentRead(true)
         .projectionExpression("#namespace, #key")
-        .expressionAttributeNames(ImmutableMap.of("#namespace", partitionKey, "#key", sortKey)));
+        .expressionAttributeNames(mapOf("#namespace", partitionKey, "#key", sortKey)));
     for (ScanResponse resp: results) {
       itemsToDelete.addAll(resp.items());
     }
