@@ -60,7 +60,7 @@ import software.amazon.awssdk.services.dynamodb.paginators.QueryIterable;
  * </ul>
  */
 final class DynamoDbDataStoreImpl implements PersistentDataStore {
-  private static final Logger logger = LoggerFactory.getLogger(DynamoDbDataStoreImpl.class);
+  private static final Logger logger = LoggerFactory.getLogger("com.launchdarkly.sdk.server.LDClient.DataStore.DynamoDB");
   
   static final String partitionKey = "namespace";
   static final String sortKey = "key";
