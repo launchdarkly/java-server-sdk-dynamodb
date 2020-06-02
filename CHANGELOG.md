@@ -2,6 +2,19 @@
 
 All notable changes to the LaunchDarkly Java SDK DynamoDB integration will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.0.0] - 2020-06-02
+This release is for use with versions 5.0.0 and higher of [`launchdarkly-java-server-sdk`](https://github.com/launchdarkly/java-server-sdk).
+
+For more information about changes in the SDK database integrations, see the [4.x to 5.0 migration guide](https://docs-stg.launchdarkly.com/252/sdk/server-side/java/migration-4-to-5/).
+
+### Changed:
+- The entry point is now `com.launchdarkly.sdk.server.integrations.DynamoDb` rather than `com.launchdarkly.client.integrations.DynamoDb`.
+- The SLF4J logger name is now `com.launchdarkly.sdk.server.LDClient.DataStore.DynamoDb` rather than `com.launchdarkly.client.integrations.DynamoDbDataStoreImpl`.
+
+### Removed:
+- Removed the deprecated entry point `com.launchdarkly.client.dynamodb.DynamoDbComponents`.
+
+
 ## [2.1.0] - 2020-01-30
 ### Added:
 - New classes `com.launchdarkly.client.integrations.DynamoDb` and `com.launchdarkly.client.integrations.DynamoDbDataStoreBuilder`, which serve the same purpose as the previous classes but are designed to work with the newer persistent data store API introduced in [Java SDK 4.12.0](https://github.com/launchdarkly/java-server-sdk/releases/tag/4.12.0).
