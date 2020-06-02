@@ -1,2 +1,1 @@
-com.launchdarkly.client.dynamodb
-com.launchdarkly.client.integrations
+com.launchdarkly.sdk.server.integrations
