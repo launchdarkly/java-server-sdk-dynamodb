@@ -2,6 +2,7 @@ package com.launchdarkly.sdk.server.integrations;
 
 import com.launchdarkly.sdk.LDValue;
 import com.launchdarkly.sdk.server.LDConfig;
+import com.launchdarkly.sdk.server.interfaces.BasicConfiguration;
 import com.launchdarkly.sdk.server.interfaces.ClientContext;
 import com.launchdarkly.sdk.server.interfaces.DiagnosticDescription;
 import com.launchdarkly.sdk.server.interfaces.PersistentDataStore;
@@ -130,7 +131,7 @@ public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactor
   }
 
   @Override
-  public LDValue describeConfiguration(LDConfig config) {
+  public LDValue describeConfiguration(BasicConfiguration config) {
     return LDValue.of("DynamoDB");
   }
 }
