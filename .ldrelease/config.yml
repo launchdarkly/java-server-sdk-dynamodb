@@ -1,5 +1,6 @@
+version: 2
 
-releasableBranches:
+branches:
   - name: master
     description: 3.x - for Java SDK 5.0+, uses AWS 2.x
   - name: 2.x
@@ -13,10 +14,13 @@ publications:
   - url: https://javadoc.io/doc/com.launchdarkly/launchdarkly-java-server-sdk-dynamodb-store
     description: documentation (javadoc.io)
 
-template:
-  name: gradle
-  skip:
-    - test  # Running the unit tests would require installing DynamoDB. They've already been run in CI.
+jobs:
+  - docker:
+      image: gradle:6.8.3-jdk11
+    template:
+      name: gradle
+    skip:
+      - test  # Running the unit tests would require installing DynamoDB. They've already been run in CI.
 
 documentation:
-  githubPages: true
+  gitHubPages: true
