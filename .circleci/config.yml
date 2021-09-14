@@ -13,7 +13,7 @@ workflows:
 jobs:
   build-test-linux:
     docker:
-      - image: circleci/java
+      - image: cimg/openjdk:8.0
       - image: amazon/dynamodb-local
     steps:
       - checkout
