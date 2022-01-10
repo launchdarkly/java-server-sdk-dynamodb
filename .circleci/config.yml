@@ -4,7 +4,6 @@ orbs:
    win: circleci/windows@1.0.0
 
 workflows:
-  version: 2
   test:
     jobs:
       - build-linux
@@ -47,7 +46,6 @@ jobs:
           paths:
             - classes
 
-jobs:
   test-linux:
     parameters:
       docker-image:
