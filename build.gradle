@@ -13,7 +13,7 @@ plugins {
     id "signing"
     id "maven-publish"
     id "de.marcphilipp.nexus-publish" version "0.3.0"
-    id "io.codearte.nexus-staging" version "0.21.2"
+    id "io.codearte.nexus-staging" version "0.30.0"
     id "idea"
 }
 
@@ -49,12 +49,12 @@ dependencies {
     api "com.launchdarkly:launchdarkly-java-server-sdk:${versions.sdk}"
     api "software.amazon.awssdk:dynamodb:${versions.dynamodb}"
     api "org.slf4j:slf4j-api:${versions.slf4j}"
-    testCompile "org.hamcrest:hamcrest-all:1.3"
-    testCompile "junit:junit:4.12"
-    testCompile "com.launchdarkly:launchdarkly-java-server-sdk:${versions.sdk}:test" // our unit tests use helper classes from the SDK
-    testRuntime "ch.qos.logback:logback-classic:1.1.7"
-    testRuntime "com.google.guava:guava:28.2-jre" // required by SDK tests, not used in this library itself
-    testRuntime "com.google.code.gson:gson:2.7" // same as above
+    testImplementation "org.hamcrest:hamcrest-all:1.3"
+    testImplementation "junit:junit:4.12"
+    testImplementation "com.launchdarkly:launchdarkly-java-server-sdk:${versions.sdk}:test" // our unit tests use helper classes from the SDK
+    testImplementation "ch.qos.logback:logback-classic:1.1.7"
+    testImplementation "com.google.guava:guava:28.2-jre" // required by SDK tests, not used in this library itself
+    testImplementation "com.google.code.gson:gson:2.7" // same as above
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
@@ -77,6 +77,10 @@ test {
         showStandardStreams = true
         exceptionFormat = 'full'
     }
+}
+
+checkstyle {
+    configFile = file("${project.rootDir}/checkstyle.xml")
 }
 
 idea {

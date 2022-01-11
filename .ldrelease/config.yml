@@ -16,11 +16,11 @@ publications:
 
 jobs:
   - docker:
-      image: gradle:6.8.3-jdk11
+      image: gradle:7.3.3-jdk8
     template:
       name: gradle
-    skip:
-      - test  # Running the unit tests would require installing DynamoDB. They've already been run in CI.
+      skip:
+        - test  # Running the unit tests would require installing DynamoDB. They've already been run in CI.
 
 documentation:
   gitHubPages: true
