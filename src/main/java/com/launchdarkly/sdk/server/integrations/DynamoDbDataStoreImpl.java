@@ -67,8 +67,8 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
 
   private Runnable updateHook;
   
-  DynamoDbDataStoreImpl(DynamoDbClient client, String tableName, String prefix) {
-    super(client, tableName, prefix);
+  DynamoDbDataStoreImpl(DynamoDbClient client, boolean wasExistingClient, String tableName, String prefix) {
+    super(client, wasExistingClient, tableName, prefix);
   }
 
   @Override
@@ -83,9 +83,7 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
     for (QueryResponse resp: client.queryPaginator(makeQueryForKind(kind).build())) {
       for (Map<String, AttributeValue> item: resp.items()) {
         AttributeValue keyAttr = item.get(SORT_KEY);
-        if (keyAttr == null || keyAttr.s() == null) {
-          
-        } else {
+        if (keyAttr != null && keyAttr.s() != null) {
           SerializedItemDescriptor itemOut = unmarshalItem(kind, item);
           if (itemOut != null) {
             itemsOut.add(new AbstractMap.SimpleEntry<>(keyAttr.s(), itemOut));
@@ -122,18 +120,17 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
     // Now delete any previously existing items whose keys were not in the current data
     for (Map.Entry<String, String> combinedKey: unusedOldKeys) {
       if (!combinedKey.getKey().equals(initedKey())) {
-        Map<String, AttributeValue> keys = mapOf(
-            PARTITION_KEY, AttributeValue.builder().s(combinedKey.getKey()).build(),
-            SORT_KEY, AttributeValue.builder().s(combinedKey.getValue()).build());
-        requests.add(WriteRequest.builder().deleteRequest(builder -> builder.key(keys)).build());
+        requests.add(WriteRequest.builder()
+            .deleteRequest(builder ->
+                builder.key(makeKeysMap(combinedKey.getKey(), combinedKey.getValue())))
+            .build());
       }
     }
     
     // Now set the special key that we check in initializedInternal()
-    Map<String, AttributeValue> initedItem = mapOf(
-        PARTITION_KEY, AttributeValue.builder().s(initedKey()).build(),
-        SORT_KEY, AttributeValue.builder().s(initedKey()).build());
-    requests.add(WriteRequest.builder().putRequest(builder -> builder.item(initedItem)).build());
+    requests.add(WriteRequest.builder()
+        .putRequest(builder -> builder.item(makeKeysMap(initedKey(), initedKey())))
+        .build());
     
     batchWriteRequests(client, tableName, requests);
     
@@ -173,7 +170,7 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
     return resp.item() != null && resp.item().size() > 0;
   }
 
-  @Override
+  //@Override
   public boolean isStoreAvailable() {
     try {
       isInitialized(); // don't care about the return value, just that it doesn't throw an exception
@@ -207,17 +204,6 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
         .tableName(tableName)
         .consistentRead(true)
         .keyConditions(keyConditions);
-  }
-  
-  private GetItemResponse getItemByKeys(String namespace, String key) {
-    Map<String, AttributeValue> keyMap = mapOf(
-        PARTITION_KEY, AttributeValue.builder().s(namespace).build(),
-        SORT_KEY, AttributeValue.builder().s(key).build()
-    );
-    return client.getItem(builder -> builder.tableName(tableName)
-        .consistentRead(true)
-        .key(keyMap)
-    );
   }
   
   private Set<Map.Entry<String, String>> readExistingKeys(FullDataSet<?> kindsFromThisDataSet) {
