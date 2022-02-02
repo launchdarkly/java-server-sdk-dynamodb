@@ -1,5 +1,8 @@
 package com.launchdarkly.sdk.server.integrations;
 
+import com.launchdarkly.sdk.server.interfaces.BigSegmentStoreFactory;
+import com.launchdarkly.sdk.server.interfaces.PersistentDataStoreFactory;
+
 /**
  * Integration between the LaunchDarkly SDK and DynamoDB.
  *
@@ -9,18 +12,39 @@ public abstract class DynamoDb {
   /**
    * Returns a builder object for creating a DynamoDB-backed data store.
    * <p>
-   * This object can be modified with {@link DynamoDbDataStoreBuilder} methods for any desired
-   * custom DynamoDB options. Then, pass it to
-   * {@link com.launchdarkly.sdk.server.Components#persistentDataStore(com.launchdarkly.sdk.server.interfaces.PersistentDataStoreFactory)}
-   * and set any desired caching options. Finally, pass the result to
-   * {@link com.launchdarkly.sdk.server.LDConfig.Builder#dataStore(com.launchdarkly.sdk.server.interfaces.DataStoreFactory)}.
-   * For example:
-   * 
+   * This can be used either for the main data store that holds feature flag data, or for the Big
+   * Segment store, or both. If you are using both, they do not have to have the same parameters.
+   * For instance, in this example the main data store uses a table called "table1" and the Big
+   * Segment store uses a table called "table2":
+   *
+   * <pre><code>
+   *   LDConfig config = new LDConfig.Builder()
+   *       .dataStore(
+   *           Components.persistentDataStore(
+   *               DynamoDb.dataStore("table1")
+   *           )
+   *       )
+   *       .bigSegments(
+   *           Components.bigSegments(
+   *               DynamoDb.dataStore("table2")
+   *           )
+   *       )
+   *       .build();
+   * </code></pre>
+   *
+   * Note that the builder is passed to one of two methods,
+   * {@link com.launchdarkly.sdk.server.Components#persistentDataStore(PersistentDataStoreFactory)} or
+   * {@link com.launchdarkly.sdk.server.Components#bigSegments(BigSegmentStoreFactory)}, depending on
+   * the context in which it is being used. This is because each of those contexts has its own
+   * additional configuration options that are unrelated to the DynamoDb options. For instance, the
+   * {@link com.launchdarkly.sdk.server.Components#persistentDataStore(PersistentDataStoreFactory)}
+   * builder has options for caching:
+   *
    * <pre><code>
    *     LDConfig config = new LDConfig.Builder()
    *         .dataStore(
    *             Components.persistentDataStore(
-   *                 DynamoDb.dataStore("my-table-name")
+   *                 DynamoDb.dataStore("table1")
    *             ).cacheSeconds(15)
    *         )
    *         .build();
