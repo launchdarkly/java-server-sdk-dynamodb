@@ -1,7 +1,6 @@
 package com.launchdarkly.sdk.server.integrations;
 
 import com.launchdarkly.sdk.LDValue;
-import com.launchdarkly.sdk.server.LDConfig;
 import com.launchdarkly.sdk.server.interfaces.BasicConfiguration;
 import com.launchdarkly.sdk.server.interfaces.BigSegmentStore;
 import com.launchdarkly.sdk.server.interfaces.BigSegmentStoreFactory;
@@ -21,49 +20,14 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 /**
  * Builder/factory class for the DynamoDB data store.
  * <p>
- * This can be used either for the main data store that holds feature flag data, or for the Big
- * Segment store, or both. If you are using both, they do not have to have the same parameters. For
- * instance, in this example the main data store uses a table called "table1" and the Big Segment
- * store uses a table called "table2":
- *
- * <pre><code>
- *     LDConfig config = new LDConfig.Builder()
- *         .dataStore(
- *             Components.persistentDataStore(
- *                 DynamoDb.dataStore("table1")
- *             )
- *         )
- *         .bigSegments(
- *             Components.bigSegments(
- *                 DynamoDb.dataStore("table2")
- *             )
- *         )
- *         .build();
- * </code></pre>
- *
- * Note that the builder is passed to one of two methods,
- * {@link com.launchdarkly.sdk.server.Components#persistentDataStore(PersistentDataStoreFactory)} or
- * {@link com.launchdarkly.sdk.server.Components#bigSegments(BigSegmentStoreFactory)}, depending on
- * the context in which it is being used. This is because each of those contexts has its own
- * additional configuration options that are unrelated to the DynamoDb options. For instance, the
- * {@link com.launchdarkly.sdk.server.Components#persistentDataStore(PersistentDataStoreFactory)}
- * builder has options for caching:
- *
- * <pre><code>
- *     LDConfig config = new LDConfig.Builder()
- *         .dataStore(
- *             Components.persistentDataStore(
- *                 DynamoDb.dataStore("table1")
- *             ).cacheSeconds(15)
- *         )
- *         .build();
- * </code></pre>
- *
+ * Examples of configuring the SDK with this builder are described in the documentation for
+ * {@link DynamoDb#dataStore(String)}, which returns an instance of this class.
+ * <p>
  * The AWS SDK provides many configuration options for a DynamoDB client. This class has
  * corresponding methods for some of the most commonly used ones. If you need more sophisticated
  * control over the DynamoDB client, you can construct one of your own and pass it in with the
  * {@link #existingClient(DynamoDbClient)} method.
- * 
+ *
  * @since 2.1.0
  */
 public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactory, BigSegmentStoreFactory, DiagnosticDescription {
@@ -143,7 +107,7 @@ public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactor
    * Specifies an existing, already-configured DynamoDB client instance that the data store
    * should use rather than creating one of its own. If you specify an existing client, then the
    * other builder methods for configuring DynamoDB are ignored.
-   *  
+   *
    * @param existingClient an existing DynamoDB client instance
    * @return the builder
    */
