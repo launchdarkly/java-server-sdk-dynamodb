@@ -1,8 +1,9 @@
 package com.launchdarkly.sdk.server.integrations;
 
 import com.launchdarkly.sdk.LDValue;
-import com.launchdarkly.sdk.server.LDConfig;
 import com.launchdarkly.sdk.server.interfaces.BasicConfiguration;
+import com.launchdarkly.sdk.server.interfaces.BigSegmentStore;
+import com.launchdarkly.sdk.server.interfaces.BigSegmentStoreFactory;
 import com.launchdarkly.sdk.server.interfaces.ClientContext;
 import com.launchdarkly.sdk.server.interfaces.DiagnosticDescription;
 import com.launchdarkly.sdk.server.interfaces.PersistentDataStore;
@@ -19,22 +20,17 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 /**
  * Builder/factory class for the DynamoDB data store.
  * <p>
- * Obtain an instance of this class by calling {@link com.launchdarkly.sdk.server.integrations.DynamoDb#dataStore(String)}.
- * After calling its methods to specify any desired custom settings, wrap it in a
- * {@link com.launchdarkly.sdk.server.integrations.PersistentDataStoreBuilder}
- * by calling {@code Components.persistentDataStore()}, then pass the result into the SDK configuration with
- * {@link com.launchdarkly.sdk.server.LDConfig.Builder#dataStore(com.launchdarkly.sdk.server.interfaces.DataStoreFactory)}.
- * You do not need to call {@link #createPersistentDataStore(ClientContext)} yourself to build the actual data store; that
- * will be done by the SDK.
+ * Examples of configuring the SDK with this builder are described in the documentation for
+ * {@link DynamoDb#dataStore(String)}, which returns an instance of this class.
  * <p>
  * The AWS SDK provides many configuration options for a DynamoDB client. This class has
  * corresponding methods for some of the most commonly used ones. If you need more sophisticated
  * control over the DynamoDB client, you can construct one of your own and pass it in with the
  * {@link #existingClient(DynamoDbClient)} method.
- * 
+ *
  * @since 2.1.0
  */
-public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactory, DiagnosticDescription {
+public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactory, BigSegmentStoreFactory, DiagnosticDescription {
   private final String tableName;
   
   private String prefix;
@@ -111,7 +107,7 @@ public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactor
    * Specifies an existing, already-configured DynamoDB client instance that the data store
    * should use rather than creating one of its own. If you specify an existing client, then the
    * other builder methods for configuring DynamoDB are ignored.
-   *  
+   *
    * @param existingClient an existing DynamoDB client instance
    * @return the builder
    */
@@ -127,7 +123,17 @@ public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactor
   @Override
   public PersistentDataStore createPersistentDataStore(ClientContext context) {  
     DynamoDbClient client = (existingClient != null) ? existingClient : clientBuilder.build();
-    return new DynamoDbDataStoreImpl(client, tableName, prefix);
+    return new DynamoDbDataStoreImpl(client, existingClient != null, tableName, prefix);
+  }
+
+  /**
+   * Called internally by the SDK to create the actual Big Segment store instance.
+   * @return the Big Segment store configured by this builder
+   */
+  @Override
+  public BigSegmentStore createBigSegmentStore(ClientContext context) {
+    DynamoDbClient client = (existingClient != null) ? existingClient : clientBuilder.build();
+    return new DynamoDbBigSegmentStoreImpl(client, existingClient != null, tableName, prefix);
   }
 
   @Override

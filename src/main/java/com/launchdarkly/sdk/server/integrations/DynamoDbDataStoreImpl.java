@@ -9,7 +9,6 @@ import com.launchdarkly.sdk.server.interfaces.PersistentDataStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -59,29 +58,17 @@ import software.amazon.awssdk.services.dynamodb.paginators.QueryIterable;
  * stored as a single item, this mechanism will not work for extremely large flags or segments.
  * </ul>
  */
-final class DynamoDbDataStoreImpl implements PersistentDataStore {
+final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements PersistentDataStore {
   private static final Logger logger = LoggerFactory.getLogger("com.launchdarkly.sdk.server.LDClient.DataStore.DynamoDB");
   
-  static final String partitionKey = "namespace";
-  static final String sortKey = "key";
   private static final String versionAttribute = "version";
   private static final String itemJsonAttribute = "item";
   private static final String deletedItemPlaceholder = "null"; // DynamoDB doesn't allow empty strings
-  private final DynamoDbClient client;
-  private final String tableName;
-  private final String prefix;
-  
+
   private Runnable updateHook;
   
-  DynamoDbDataStoreImpl(DynamoDbClient client, String tableName, String prefix) {
-    this.client = client;
-    this.tableName = tableName;
-    this.prefix = "".equals(prefix) ? null : prefix;
-  }
-  
-  @Override
-  public void close() throws IOException {
-    client.close();
+  DynamoDbDataStoreImpl(DynamoDbClient client, boolean wasExistingClient, String tableName, String prefix) {
+    super(client, wasExistingClient, tableName, prefix);
   }
 
   @Override
@@ -95,10 +82,8 @@ final class DynamoDbDataStoreImpl implements PersistentDataStore {
     List<Map.Entry<String, SerializedItemDescriptor>> itemsOut = new ArrayList<>();
     for (QueryResponse resp: client.queryPaginator(makeQueryForKind(kind).build())) {
       for (Map<String, AttributeValue> item: resp.items()) {
-        AttributeValue keyAttr = item.get(sortKey);
-        if (keyAttr == null || keyAttr.s() == null) {
-          
-        } else {
+        AttributeValue keyAttr = item.get(SORT_KEY);
+        if (keyAttr != null && keyAttr.s() != null) {
           SerializedItemDescriptor itemOut = unmarshalItem(kind, item);
           if (itemOut != null) {
             itemsOut.add(new AbstractMap.SimpleEntry<>(keyAttr.s(), itemOut));
@@ -135,18 +120,17 @@ final class DynamoDbDataStoreImpl implements PersistentDataStore {
     // Now delete any previously existing items whose keys were not in the current data
     for (Map.Entry<String, String> combinedKey: unusedOldKeys) {
       if (!combinedKey.getKey().equals(initedKey())) {
-        Map<String, AttributeValue> keys = mapOf(
-            partitionKey, AttributeValue.builder().s(combinedKey.getKey()).build(),
-            sortKey, AttributeValue.builder().s(combinedKey.getValue()).build());
-        requests.add(WriteRequest.builder().deleteRequest(builder -> builder.key(keys)).build());
+        requests.add(WriteRequest.builder()
+            .deleteRequest(builder ->
+                builder.key(makeKeysMap(combinedKey.getKey(), combinedKey.getValue())))
+            .build());
       }
     }
     
     // Now set the special key that we check in initializedInternal()
-    Map<String, AttributeValue> initedItem = mapOf(
-        partitionKey, AttributeValue.builder().s(initedKey()).build(),
-        sortKey, AttributeValue.builder().s(initedKey()).build());
-    requests.add(WriteRequest.builder().putRequest(builder -> builder.item(initedItem)).build());
+    requests.add(WriteRequest.builder()
+        .putRequest(builder -> builder.item(makeKeysMap(initedKey(), initedKey())))
+        .build());
     
     batchWriteRequests(client, tableName, requests);
     
@@ -166,8 +150,8 @@ final class DynamoDbDataStoreImpl implements PersistentDataStore {
           .item(encodedItem)
           .conditionExpression("attribute_not_exists(#namespace) or attribute_not_exists(#key) or :version > #version")
           .expressionAttributeNames(mapOf(
-              "#namespace", partitionKey,
-              "#key", sortKey,
+              "#namespace", PARTITION_KEY,
+              "#key", SORT_KEY,
               "#version", versionAttribute))
           .expressionAttributeValues(mapOf(
               ":version", AttributeValue.builder().n(String.valueOf(newItem.getVersion())).build()))
@@ -199,11 +183,7 @@ final class DynamoDbDataStoreImpl implements PersistentDataStore {
   public void setUpdateHook(Runnable updateHook) {
     this.updateHook = updateHook;
   }
-  
-  private String prefixedNamespace(String base) {
-    return prefix == null ? base : (prefix + ":" + base);
-  }
-  
+
   private String namespaceForKind(DataKind kind) {
     return prefixedNamespace(kind.getName());
   }
@@ -214,7 +194,7 @@ final class DynamoDbDataStoreImpl implements PersistentDataStore {
 
   private QueryRequest.Builder makeQueryForKind(DataKind kind) {
     Map<String, Condition> keyConditions = mapOf(
-        partitionKey,
+        PARTITION_KEY,
         Condition.builder()
           .comparisonOperator(ComparisonOperator.EQ)
           .attributeValueList(AttributeValue.builder().s(namespaceForKind(kind)).build())
@@ -226,17 +206,6 @@ final class DynamoDbDataStoreImpl implements PersistentDataStore {
         .keyConditions(keyConditions);
   }
   
-  private GetItemResponse getItemByKeys(String namespace, String key) {
-    Map<String, AttributeValue> keyMap = mapOf(
-        partitionKey, AttributeValue.builder().s(namespace).build(),
-        sortKey, AttributeValue.builder().s(key).build()
-    );
-    return client.getItem(builder -> builder.tableName(tableName)
-        .consistentRead(true)
-        .key(keyMap)
-    );
-  }
-  
   private Set<Map.Entry<String, String>> readExistingKeys(FullDataSet<?> kindsFromThisDataSet) {
     Set<Map.Entry<String, String>> keys = new HashSet<>();
     for (Map.Entry<DataKind, ?> e: kindsFromThisDataSet.getData()) {
@@ -244,13 +213,13 @@ final class DynamoDbDataStoreImpl implements PersistentDataStore {
       QueryRequest req = makeQueryForKind(kind)
         .projectionExpression("#namespace, #key")
         .expressionAttributeNames(mapOf(
-            "#namespace", partitionKey, "#key", sortKey))
+            "#namespace", PARTITION_KEY, "#key", SORT_KEY))
         .build();
       QueryIterable queryResults = client.queryPaginator(req);
       for (QueryResponse resp: queryResults) {
         for (Map<String, AttributeValue> item: resp.items()) {
-          String namespace = item.get(partitionKey).s();
-          String key = item.get(sortKey).s();
+          String namespace = item.get(PARTITION_KEY).s();
+          String key = item.get(SORT_KEY).s();
           keys.add(new AbstractMap.SimpleEntry<>(namespace, key));
         }
       }
@@ -261,8 +230,8 @@ final class DynamoDbDataStoreImpl implements PersistentDataStore {
   private Map<String, AttributeValue> marshalItem(DataKind kind, String key, SerializedItemDescriptor item) {
     String json = item.isDeleted() ? deletedItemPlaceholder : item.getSerializedItem();
     return mapOf(
-        partitionKey, AttributeValue.builder().s(namespaceForKind(kind)).build(),
-        sortKey, AttributeValue.builder().s(key).build(),
+        PARTITION_KEY, AttributeValue.builder().s(namespaceForKind(kind)).build(),
+        SORT_KEY, AttributeValue.builder().s(key).build(),
         versionAttribute, AttributeValue.builder().n(String.valueOf(item.getVersion())).build(),
         itemJsonAttribute, AttributeValue.builder().s(json).build()
     );
