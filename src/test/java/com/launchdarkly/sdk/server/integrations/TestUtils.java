@@ -30,6 +30,7 @@ import software.amazon.awssdk.services.dynamodb.paginators.ScanIterable;
 public class TestUtils {
   static final String TABLE_NAME = "LD_DYNAMODB_TEST_TABLE";
   static final URI DYNAMODB_ENDPOINT = URI.create("http://localhost:8000");
+  private static DynamoDbClient client;
 
   static AwsCredentialsProvider getTestCredentials() {
     // The values here don't matter, it just expects us to provide something (since there may not be AWS
@@ -45,11 +46,14 @@ public class TestUtils {
   }
 
   static DynamoDbClient createTestClient() {
-    return DynamoDbClient.builder()
-        .endpointOverride(DYNAMODB_ENDPOINT)
-        .region(Region.US_EAST_1)
-        .credentialsProvider(getTestCredentials())
-        .build();
+    if (client == null) {
+      client = DynamoDbClient.builder()
+          .endpointOverride(DYNAMODB_ENDPOINT)
+          .region(Region.US_EAST_1)
+          .credentialsProvider(getTestCredentials())
+          .build();
+    }
+    return client;
   }
 
   static void createTableIfNecessary() {
