@@ -90,19 +90,23 @@ public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<Dynam
       ) throws Exception {
     SerializedItemDescriptor badItem = makeTooBigItem(dataKind);
     
+    // Construct a data set that is based on the hard-coded data from makeGoodData(), but with one
+    // oversized item inserted in either the flags collection or the segments collection.
     FullDataSet<SerializedItemDescriptor> goodData = makeGoodData();
     List<Map.Entry<DataKind, KeyedItems<SerializedItemDescriptor>>> dataPlusBadItem =
-        Lists.newArrayList(goodData.getData());
+        Lists.newArrayList(goodData.getData()); // converting the data set to a mutable list
     List<Map.Entry<String, SerializedItemDescriptor>> items = Lists.newArrayList(
-        dataPlusBadItem.get(collIndex).getValue().getItems());
+        dataPlusBadItem.get(collIndex).getValue().getItems()); // this is now either list of flags or list of segments
     items.add(0, new SimpleEntry<>(BAD_ITEM_KEY, badItem));
-    // put the bad item first to prove that items after that one are still stored
+    // putting the bad item first to prove that items after that one are still stored
     dataPlusBadItem.set(collIndex, new SimpleEntry<>(dataKind, new KeyedItems<>(items)));
-        
+    
+    // Initialize the store with this data set. It should not throw an exception, but instead just
+    // log an error and store all the *other* items-- so the resulting state should be the same as
+    // makeGoodData().
     try (PersistentDataStore store = makeStore()) {
       store.init(new FullDataSet<>(dataPlusBadItem));
 
-      // init should not have thrown an exception, just logged an error and stored all the other items
       assertDataSetsEqual(goodData, getAllData(store));
     }
   }
@@ -112,14 +116,16 @@ public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<Dynam
       ) throws Exception {
     FullDataSet<SerializedItemDescriptor> goodData = makeGoodData();
     
+    // Initialize the store with valid data. 
     try (PersistentDataStore store = makeStore()) {
       store.init(goodData);
       
       assertDataSetsEqual(goodData, getAllData(store));
       
+      // Now try to store an oversized item. It should not throw an exception, but should not do
+      // the update-- so the resulting state should be the same valid data as before.
       store.upsert(dataKind, BAD_ITEM_KEY, makeTooBigItem(dataKind));
 
-      // upsert should not have thrown an exception, just logged an error and skipped storing that update
       assertDataSetsEqual(goodData, getAllData(store));
     }
   }
