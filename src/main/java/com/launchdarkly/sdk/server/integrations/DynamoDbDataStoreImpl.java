@@ -65,6 +65,11 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
   private static final String itemJsonAttribute = "item";
   private static final String deletedItemPlaceholder = "null"; // DynamoDB doesn't allow empty strings
 
+  // We won't try to store items whose total size exceeds this. The DynamoDB documentation says
+  // only "400KB", which probably means 400*1024, but to avoid any chance of trying to store a
+  // too-large item we are rounding it down.
+  private static final int DYNAMO_DB_MAX_ITEM_SIZE = 400000;
+
   private Runnable updateHook;
   
   DynamoDbDataStoreImpl(DynamoDbClient client, boolean wasExistingClient, String tableName, String prefix) {
@@ -108,6 +113,11 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
       for (Map.Entry<String, SerializedItemDescriptor> itemEntry: entry.getValue().getItems()) {
         String key = itemEntry.getKey();
         Map<String, AttributeValue> encodedItem = marshalItem(kind, key, itemEntry.getValue());
+        
+        if (!checkSizeLimit(encodedItem)) {
+          continue;
+        }
+        
         requests.add(WriteRequest.builder().putRequest(builder -> builder.item(encodedItem)).build());
         
         Map.Entry<String, String> combinedKey = new AbstractMap.SimpleEntry<>(namespaceForKind(kind), key);
@@ -140,6 +150,9 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
   @Override
   public boolean upsert(DataKind kind, String key, SerializedItemDescriptor newItem) {
     Map<String, AttributeValue> encodedItem = marshalItem(kind, key, newItem);
+    if (!checkSizeLimit(encodedItem)) {
+      return false;
+    }
     
     if (updateHook != null) { // instrumentation for tests
       updateHook.run();
@@ -270,5 +283,48 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
       Map<String, List<WriteRequest>> batchMap = mapOf(tableName, batch);
       client.batchWriteItem(builder -> builder.requestItems(batchMap));
     }
+  }
+  
+  private static boolean checkSizeLimit(Map<String, AttributeValue> item) {
+    // see: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/CapacityUnitCalculations.html
+    int size = 100; // fixed overhead for index data
+    for (Map.Entry<String, AttributeValue> kv: item.entrySet()) {
+      size += utf8Length(kv.getKey());
+      if (kv.getValue().s() != null) {
+        size += utf8Length(kv.getValue().s());
+      } else if (kv.getValue().n() != null) {
+        size += utf8Length(kv.getValue().n());
+      }
+    }
+    if (size <= DYNAMO_DB_MAX_ITEM_SIZE) {
+      return true;
+    }
+    logger.error("The item \"{}\" in \"{}\" was too large to store in DynamoDB and was dropped",
+        item.get(SORT_KEY).s(), item.get(PARTITION_KEY).s());
+    return false;
+  }
+  
+  private static int utf8Length(String s) {
+    // Unfortunately Java (at least Java 8) doesn't have a built-in way to determine the UTF8 encoding
+    // length without actually creating a new byte array, which we would rather not do. Guava does
+    // support this, but we don't want a dependency on Guava (except in test code).
+    if (s == null) {
+      return 0;
+    }
+    int count = 0;
+    for (int i = 0, len = s.length(); i < len; i++) {
+      char ch = s.charAt(i);
+      if (ch <= 0x7F) {
+        count++;
+      } else if (ch <= 0x7FF) {
+        count += 2;
+      } else if (Character.isHighSurrogate(ch)) {
+        count += 4;
+        ++i;
+      } else {
+        count += 3;
+      }
+    }
+    return count;
   }
 }
