@@ -1,7 +1,7 @@
 version: 2
 
 branches:
-  - name: master
+  - name: main
     description: 3.x - for Java SDK 5.0+, uses AWS 2.x
   - name: 2.x
     description: for Java SDK 4.x, uses AWS 2.x
