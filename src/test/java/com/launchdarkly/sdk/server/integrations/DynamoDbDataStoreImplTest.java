@@ -5,11 +5,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.launchdarkly.sdk.server.DataModel;
+import com.launchdarkly.sdk.server.interfaces.ClientContext;
 import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.DataKind;
 import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.FullDataSet;
 import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.KeyedItems;
 import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.SerializedItemDescriptor;
 import com.launchdarkly.sdk.server.interfaces.PersistentDataStore;
+import com.launchdarkly.sdk.server.interfaces.PersistentDataStoreFactory;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -19,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static com.launchdarkly.sdk.server.TestComponents.clientContext;
 import static com.launchdarkly.sdk.server.integrations.TestUtils.baseBuilder;
 import static com.launchdarkly.sdk.server.integrations.TestUtils.clearEverything;
 import static com.launchdarkly.sdk.server.integrations.TestUtils.createTableIfNecessary;
@@ -44,13 +47,8 @@ public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<Dynam
   }
   
   @Override
-  protected DynamoDbDataStoreImpl makeStore() {
-    return (DynamoDbDataStoreImpl)baseBuilder().createPersistentDataStore(null);
-  }
-  
-  @Override
-  protected DynamoDbDataStoreImpl makeStoreWithPrefix(String prefix) {
-    return (DynamoDbDataStoreImpl)baseBuilder().prefix(prefix).createPersistentDataStore(null);
+  protected PersistentDataStoreFactory buildStore(String prefix) {
+    return baseBuilder().prefix(prefix);
   }
   
   @Override
@@ -104,7 +102,7 @@ public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<Dynam
     // Initialize the store with this data set. It should not throw an exception, but instead just
     // log an error and store all the *other* items-- so the resulting state should be the same as
     // makeGoodData().
-    try (PersistentDataStore store = makeStore()) {
+    try (PersistentDataStore store = buildStore(null).createPersistentDataStore(makeClientContext())) {
       store.init(new FullDataSet<>(dataPlusBadItem));
 
       assertDataSetsEqual(goodData, getAllData(store));
@@ -117,7 +115,7 @@ public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<Dynam
     FullDataSet<SerializedItemDescriptor> goodData = makeGoodData();
     
     // Initialize the store with valid data. 
-    try (PersistentDataStore store = makeStore()) {
+    try (PersistentDataStore store = buildStore(null).createPersistentDataStore(makeClientContext())) {
       store.init(goodData);
       
       assertDataSetsEqual(goodData, getAllData(store));
@@ -130,6 +128,10 @@ public class DynamoDbDataStoreImplTest extends PersistentDataStoreTestBase<Dynam
     }
   }
   
+  private ClientContext makeClientContext() {
+    return clientContext("", baseConfig().build());
+  }
+
   private static FullDataSet<SerializedItemDescriptor> makeGoodData() {
     return new FullDataSet<SerializedItemDescriptor>(ImmutableList.of(
          new SimpleEntry<>(DataModel.FEATURES,

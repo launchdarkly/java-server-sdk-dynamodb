@@ -123,7 +123,8 @@ public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactor
   @Override
   public PersistentDataStore createPersistentDataStore(ClientContext context) {  
     DynamoDbClient client = (existingClient != null) ? existingClient : clientBuilder.build();
-    return new DynamoDbDataStoreImpl(client, existingClient != null, tableName, prefix);
+    return new DynamoDbDataStoreImpl(client, existingClient != null, tableName, prefix,
+      context.getBasic().getBaseLogger());
   }
 
   /**
@@ -133,7 +134,8 @@ public final class DynamoDbDataStoreBuilder implements PersistentDataStoreFactor
   @Override
   public BigSegmentStore createBigSegmentStore(ClientContext context) {
     DynamoDbClient client = (existingClient != null) ? existingClient : clientBuilder.build();
-    return new DynamoDbBigSegmentStoreImpl(client, existingClient != null, tableName, prefix);
+    return new DynamoDbBigSegmentStoreImpl(client, existingClient != null, tableName, prefix,
+      context.getBasic().getBaseLogger());
   }
 
   @Override

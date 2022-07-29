@@ -2,6 +2,8 @@ package com.launchdarkly.sdk.server.integrations;
 
 import static com.launchdarkly.sdk.server.integrations.CollectionHelpers.mapOf;
 
+import com.launchdarkly.logging.LDLogger;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
@@ -18,12 +20,20 @@ abstract class DynamoDbStoreImplBase implements Closeable {
   protected final boolean wasExistingClient;
   protected final String tableName;
   protected final String prefix;
+  protected final LDLogger logger;
 
-  public DynamoDbStoreImplBase(DynamoDbClient client, boolean wasExistingClient, String tableName, String prefix) {
+  public DynamoDbStoreImplBase(
+    DynamoDbClient client,
+    boolean wasExistingClient,
+    String tableName,
+    String prefix,
+    LDLogger logger
+    ) {
     this.client = client;
     this.wasExistingClient = wasExistingClient;
     this.tableName = tableName;
     this.prefix = "".equals(prefix) ? null : prefix;
+    this.logger = logger;
   }
 
   protected String prefixedNamespace(String base) {
