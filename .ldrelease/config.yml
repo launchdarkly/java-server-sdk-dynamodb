@@ -2,7 +2,9 @@ version: 2
 
 branches:
   - name: main
-    description: 3.x - for Java SDK 5.0+, uses AWS 2.x
+    description: 4.x - for Java SDK 5.10+, uses AWS 2.x
+  - name: 3.x
+    description: for Java SDK 5.0-5.9, uses AWS 2.x
   - name: 2.x
     description: for Java SDK 4.x, uses AWS 2.x
   - name: aws-v1
