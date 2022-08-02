@@ -40,5 +40,9 @@ To build the library and run all unit tests:
 ./gradlew test
 ```
 
-The tests expect you to have DynamoDB running locally. The simplest way to do that is with Docker: `docker run -p 8000:8000 amazon/dynamodb-local`
+The tests expect you to have DynamoDB running locally. The simplest way to do that is with Docker:
+
+```shell
+docker run -p 8000:8000 amazon/dynamodb-local
+```
 

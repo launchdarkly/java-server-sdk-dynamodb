@@ -38,9 +38,8 @@ allprojects {
 }
 
 ext.versions = [
-    "sdk": "5.7.0", // the *lowest* version we're compatible with
-    "dynamodb": "2.10.32",
-    "slf4j": "1.7.21"
+    "sdk": "5.10.0", // the *lowest* version we're compatible with
+    "dynamodb": "2.10.32"
 ]
 
 ext.libraries = [:]
@@ -48,11 +47,9 @@ ext.libraries = [:]
 dependencies {
     api "com.launchdarkly:launchdarkly-java-server-sdk:${versions.sdk}"
     api "software.amazon.awssdk:dynamodb:${versions.dynamodb}"
-    api "org.slf4j:slf4j-api:${versions.slf4j}"
     testImplementation "org.hamcrest:hamcrest-all:1.3"
     testImplementation "junit:junit:4.12"
     testImplementation "com.launchdarkly:launchdarkly-java-server-sdk:${versions.sdk}:test" // our unit tests use helper classes from the SDK
-    testImplementation "ch.qos.logback:logback-classic:1.1.7"
     testImplementation "com.google.guava:guava:28.2-jre" // required by SDK tests, not used in this library itself
     testImplementation "com.google.code.gson:gson:2.7" // same as above
 }

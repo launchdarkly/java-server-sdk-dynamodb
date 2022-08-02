@@ -1,13 +1,11 @@
 package com.launchdarkly.sdk.server.integrations;
 
+import com.launchdarkly.logging.LDLogger;
 import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.DataKind;
 import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.FullDataSet;
 import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.KeyedItems;
 import com.launchdarkly.sdk.server.interfaces.DataStoreTypes.SerializedItemDescriptor;
 import com.launchdarkly.sdk.server.interfaces.PersistentDataStore;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -59,8 +57,6 @@ import software.amazon.awssdk.services.dynamodb.paginators.QueryIterable;
  * </ul>
  */
 final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements PersistentDataStore {
-  private static final Logger logger = LoggerFactory.getLogger("com.launchdarkly.sdk.server.LDClient.DataStore.DynamoDB");
-  
   private static final String versionAttribute = "version";
   private static final String itemJsonAttribute = "item";
   private static final String deletedItemPlaceholder = "null"; // DynamoDB doesn't allow empty strings
@@ -72,8 +68,15 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
 
   private Runnable updateHook;
   
-  DynamoDbDataStoreImpl(DynamoDbClient client, boolean wasExistingClient, String tableName, String prefix) {
-    super(client, wasExistingClient, tableName, prefix);
+  DynamoDbDataStoreImpl(
+    DynamoDbClient client,
+    boolean wasExistingClient,
+    String tableName,
+    String prefix,
+    LDLogger baseLogger
+    ) {
+    super(client, wasExistingClient, tableName, prefix,
+      baseLogger.subLogger("DataStore").subLogger("DynamoDb"));
   }
 
   @Override
@@ -285,7 +288,7 @@ final class DynamoDbDataStoreImpl extends DynamoDbStoreImplBase implements Persi
     }
   }
   
-  private static boolean checkSizeLimit(Map<String, AttributeValue> item) {
+  private boolean checkSizeLimit(Map<String, AttributeValue> item) {
     // see: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/CapacityUnitCalculations.html
     int size = 100; // fixed overhead for index data
     for (Map.Entry<String, AttributeValue> kv: item.entrySet()) {

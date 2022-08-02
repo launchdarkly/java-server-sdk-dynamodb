@@ -2,6 +2,7 @@ package com.launchdarkly.sdk.server.integrations;
 
 import static com.launchdarkly.sdk.server.interfaces.BigSegmentStoreTypes.createMembershipFromSegmentRefs;
 
+import com.launchdarkly.logging.LDLogger;
 import com.launchdarkly.sdk.server.interfaces.BigSegmentStore;
 import com.launchdarkly.sdk.server.interfaces.BigSegmentStoreTypes;
 
@@ -19,8 +20,15 @@ public class DynamoDbBigSegmentStoreImpl extends DynamoDbStoreImplBase implement
   private final static String METADATA_KEY = "big_segments_metadata";
   private final static String SYNC_TIME_ATTR = "synchronizedOn";
 
-  DynamoDbBigSegmentStoreImpl(DynamoDbClient client, boolean wasExistingClient, String tableName, String prefix) {
-    super(client, wasExistingClient, tableName, prefix);
+  DynamoDbBigSegmentStoreImpl(
+    DynamoDbClient client,
+    boolean wasExistingClient,
+    String tableName,
+    String prefix,
+    LDLogger baseLogger
+    ) {
+    super(client, wasExistingClient, tableName, prefix,
+      baseLogger.subLogger("BigSegments").subLogger("DynamoDb"));
   }
 
   @Override
