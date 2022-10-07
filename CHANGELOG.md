@@ -2,6 +2,11 @@
 
 All notable changes to the LaunchDarkly Java SDK DynamoDB integration will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [4.0.0] - 2022-10-06
+This release updates the package to use the new logging mechanism that was introduced in version [5.10.0](https://github.com/launchdarkly/java-server-sdk/releases/tag/5.10.0) of the LaunchDarkly Java SDK, so that log output from the DynamoDB integration is handled in whatever way was specified by the SDK's logging configuration, instead of always using SLF4J.
+
+This version of the package will not work with SDK versions earlier than 5.10.0; that is the only reason for the 4.0.0 major version increment. The functionality of the package is otherwise unchanged, and there are no API changes.
+
 ## [3.1.1] - 2022-04-15
 ### Fixed:
 - If the SDK attempts to store a feature flag or segment whose total data size is over the 400KB limit for DynamoDB items, this integration will now log (at `Error` level) a message like `The item "my-flag-key" in "features" was too large to store in DynamoDB and was dropped` but will still process all other data updates. Previously, it would cause the SDK to enter an error state in which the oversized item would be pointlessly retried and other updates might be lost.
