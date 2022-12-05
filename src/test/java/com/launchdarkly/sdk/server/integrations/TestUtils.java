@@ -1,13 +1,16 @@
 package com.launchdarkly.sdk.server.integrations;
 
-import static com.launchdarkly.sdk.server.integrations.CollectionHelpers.mapOf;
-import static com.launchdarkly.sdk.server.integrations.DynamoDbStoreImplBase.PARTITION_KEY;
-import static com.launchdarkly.sdk.server.integrations.DynamoDbStoreImplBase.SORT_KEY;
+import com.launchdarkly.sdk.server.subsystems.BigSegmentStore;
+import com.launchdarkly.sdk.server.subsystems.PersistentDataStore;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import static com.launchdarkly.sdk.server.integrations.CollectionHelpers.mapOf;
+import static com.launchdarkly.sdk.server.integrations.DynamoDbStoreImplBase.PARTITION_KEY;
+import static com.launchdarkly.sdk.server.integrations.DynamoDbStoreImplBase.SORT_KEY;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -27,6 +30,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 import software.amazon.awssdk.services.dynamodb.paginators.ScanIterable;
 
+@SuppressWarnings("javadoc")
 public class TestUtils {
   static final String TABLE_NAME = "LD_DYNAMODB_TEST_TABLE";
   static final URI DYNAMODB_ENDPOINT = URI.create("http://localhost:8000");
@@ -38,8 +42,15 @@ public class TestUtils {
     return StaticCredentialsProvider.create(AwsBasicCredentials.create("key", "secret"));
   }
 
-  static DynamoDbDataStoreBuilder baseBuilder() {
+  static DynamoDbStoreBuilder<PersistentDataStore> baseDataStoreBuilder() {
     return DynamoDb.dataStore(TABLE_NAME)
+        .endpoint(DYNAMODB_ENDPOINT)
+        .region(Region.US_EAST_1)
+        .credentials(getTestCredentials());
+  }
+
+  static DynamoDbStoreBuilder<BigSegmentStore> baseBigSegmentStoreBuilder() {
+    return DynamoDb.bigSegmentStore(TABLE_NAME)
         .endpoint(DYNAMODB_ENDPOINT)
         .region(Region.US_EAST_1)
         .credentials(getTestCredentials());

@@ -5,11 +5,7 @@
 
 This library provides a DynamoDB-backed persistence mechanism (data store) for the [LaunchDarkly Java SDK](https://github.com/launchdarkly/java-server-sdk), replacing the default in-memory data store.
 
-This version of the library requires at least version 5.10.0 of the LaunchDarkly Java SDK, and at least version 2.1 of the AWS SDK for Java. The minimum Java version is 8.
-
-For Java SDK 5.0 through 5.9, use the latest 3.x version of this library. For Java SDK 4.x, use the latest 2.x version.
-
-If you need to use Java 7, or if you are already using AWS SDK 1.x for some other purpose, you can use the 1.x releases of this library (which are developed on the "aws-v1" branch of the repository).
+This version of the library requires at least version 6.0.0 of the LaunchDarkly Java SDK, and at least version 2.1 of the AWS SDK for Java. For versions of the library to use with earlier SDK versions, see the changelog. The minimum Java version is 8.
 
 See the [API documentation](https://launchdarkly.github.io/java-server-sdk-dynamodb) for details on classes and methods.
 
@@ -26,7 +22,7 @@ This assumes that you have already installed the LaunchDarkly Java SDK.
         <dependency>
           <groupId>com.launchdarkly</groupId>
           <artifactId>launchdarkly-java-server-sdk-dynamodb-store</artifactId>
-          <version>3.0.0</version>
+          <version>5.0.0</version>
         </dependency>
 
 3. If you do not already have the AWS SDK in your project, add the DynamoDB part of it. (This needs to be added separately, rather than being included in the LaunchDarkly jar, because AWS classes are exposed in the public interface.)

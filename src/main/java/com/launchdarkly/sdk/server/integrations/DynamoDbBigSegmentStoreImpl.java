@@ -1,10 +1,10 @@
 package com.launchdarkly.sdk.server.integrations;
 
-import static com.launchdarkly.sdk.server.interfaces.BigSegmentStoreTypes.createMembershipFromSegmentRefs;
+import static com.launchdarkly.sdk.server.subsystems.BigSegmentStoreTypes.createMembershipFromSegmentRefs;
 
 import com.launchdarkly.logging.LDLogger;
-import com.launchdarkly.sdk.server.interfaces.BigSegmentStore;
-import com.launchdarkly.sdk.server.interfaces.BigSegmentStoreTypes;
+import com.launchdarkly.sdk.server.subsystems.BigSegmentStore;
+import com.launchdarkly.sdk.server.subsystems.BigSegmentStoreTypes;
 
 import java.util.List;
 
@@ -12,7 +12,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 
-public class DynamoDbBigSegmentStoreImpl extends DynamoDbStoreImplBase implements BigSegmentStore {
+final class DynamoDbBigSegmentStoreImpl extends DynamoDbStoreImplBase implements BigSegmentStore {
   private final static String MEMBERSHIP_KEY = "big_segments_user";
   private final static String INCLUDED_ATTR = "included";
   private final static String EXCLUDED_ATTR = "excluded";
