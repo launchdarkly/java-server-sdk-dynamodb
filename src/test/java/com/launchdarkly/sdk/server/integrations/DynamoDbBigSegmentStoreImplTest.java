@@ -1,18 +1,18 @@
 package com.launchdarkly.sdk.server.integrations;
 
+import com.launchdarkly.sdk.server.subsystems.BigSegmentStore;
+import com.launchdarkly.sdk.server.subsystems.BigSegmentStoreTypes;
+import com.launchdarkly.sdk.server.subsystems.ComponentConfigurer;
+
+import org.junit.BeforeClass;
+
 import static com.launchdarkly.sdk.server.integrations.CollectionHelpers.mapOf;
 import static com.launchdarkly.sdk.server.integrations.DynamoDbStoreImplBase.PARTITION_KEY;
 import static com.launchdarkly.sdk.server.integrations.DynamoDbStoreImplBase.SORT_KEY;
 import static com.launchdarkly.sdk.server.integrations.TestUtils.TABLE_NAME;
-import static com.launchdarkly.sdk.server.integrations.TestUtils.baseBuilder;
 import static com.launchdarkly.sdk.server.integrations.TestUtils.clearEverything;
 import static com.launchdarkly.sdk.server.integrations.TestUtils.createTableIfNecessary;
 import static com.launchdarkly.sdk.server.integrations.TestUtils.createTestClient;
-
-import com.launchdarkly.sdk.server.interfaces.BigSegmentStoreFactory;
-import com.launchdarkly.sdk.server.interfaces.BigSegmentStoreTypes;
-
-import org.junit.BeforeClass;
 
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -37,8 +37,8 @@ public class DynamoDbBigSegmentStoreImplTest extends BigSegmentStoreTestBase {
   }
 
   @Override
-  protected BigSegmentStoreFactory makeStore(String prefix) {
-    return baseBuilder().prefix(prefix);
+  protected ComponentConfigurer<BigSegmentStore> makeStore(String prefix) {
+    return TestUtils.baseBigSegmentStoreBuilder().prefix(prefix);
   }
 
   @Override
