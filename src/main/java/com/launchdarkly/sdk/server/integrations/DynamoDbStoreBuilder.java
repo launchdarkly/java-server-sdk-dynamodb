@@ -21,24 +21,24 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
  * DynamoDB-based persistent data store and/or Big Segment store.
  * <p>
  * Both {@link DynamoDb#dataStore(String)} and {@link DynamoDb#bigSegmentStore(String)} return instances of
- * this class. You can use methods of the builder to specify any non-default Redis options
+ * this class. You can use methods of the builder to specify any non-default DynamoDB options
  * you may want, before passing the builder to either {@link Components#persistentDataStore(ComponentConfigurer)}
  * or {@link Components#bigSegments(ComponentConfigurer)} as appropriate. The two types of
  * stores are independent of each other; you do not need a Big Segment store if you are not
  * using the Big Segments feature, and you do not need to use the same database for both.
  *
- * In this example, the main data store uses a Redis host called "host1", and the Big Segment
- * store uses a Redis host called "host2":
+ * In this example, the main data store uses a DynamoDB table called "table1", and the Big
+ * Segment store uses a DynamoDB table called "table2":
  * <pre><code>
  *     LDConfig config = new LDConfig.Builder()
  *         .dataStore(
  *             Components.persistentDataStore(
- *                 Redis.dataStore().uri(URI.create("redis://host1:6379")
+ *                 DynamoDb.dataStore("table1")
  *             )
  *         )
  *         .bigSegments(
  *             Components.bigSegments(
- *                 Redis.dataStore().uri(URI.create("redis://host2:6379")
+ *                 DynamoDb.dataStore("table2")
  *             )
  *         )
  *         .build();
@@ -52,7 +52,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
  *     LDConfig config = new LDConfig.Builder()
  *         .dataStore(
  *             Components.persistentDataStore(
- *                 Redis.dataStore().uri(URI.create("redis://my-redis-host"))
+ *                 DynamoDb.dataStore("table1")
  *             ).cacheSeconds(15)
  *         )
  *         .build();
