@@ -2,6 +2,17 @@
 
 All notable changes to the LaunchDarkly Java SDK DynamoDB integration will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [5.0.0] - 2022-12-07
+This release corresponds to the 6.0.0 release of the LaunchDarkly Java SDK. Any application code that is being updated to use the 6.0.0 SDK, and was using a 4.x version of `launchdarkly-java-server-sdk-dynamodb`, should now use a 5.x version instead.
+
+There are no functional differences in the behavior of the DynamoDB integration; the differences are only related to changes in the usage of interface types for configuration in the SDK.
+
+### Added:
+- `DynamoDb.bigSegmentStore()`, which creates a configuration builder for use with Big Segments. Previously, the `DynamoDb.dataStore()` builder was used for both regular data stores and Big Segment stores.
+
+### Changed:
+- The type `DynamoDbDataStoreBuilder` has been removed, replaced by a generic type `DynamoDbStoreBuilder`. Application code would not normally need to reference these types by name, but if necessary, use either `DynamoDbStoreBuilder<PersistentDataStore>` or `DynamoDbStoreBuilder<BigSegmentStore>` depending on whether you are configuring a regular data store or a Big Segment store.
+
 ## [4.0.0] - 2022-10-06
 This release updates the package to use the new logging mechanism that was introduced in version [5.10.0](https://github.com/launchdarkly/java-server-sdk/releases/tag/5.10.0) of the LaunchDarkly Java SDK, so that log output from the DynamoDB integration is handled in whatever way was specified by the SDK's logging configuration, instead of always using SLF4J.
 
