@@ -22,6 +22,11 @@ workflows:
           docker-image: cimg/openjdk:17.0
           requires:
             - build-linux
+      - test-linux:
+          name: Java 19 - Linux - OpenJDK
+          docker-image: cimg/openjdk:19.0
+          requires:
+            - build-linux
       - build-test-windows:
           name: Java 11 - Windows - OpenJDK
           openjdk-version: 11.0.2.01
