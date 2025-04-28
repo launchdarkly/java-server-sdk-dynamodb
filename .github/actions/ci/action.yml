@@ -1,0 +1,70 @@
+name: Shared CI Workflow
+
+inputs:
+  java_version:
+    description: 'The Java version to use.'
+    required: true
+  java_distribution:
+    description: 'The Java distribution to use.'
+    required: false
+    default: temurin
+  os_type:
+    description: 'The OS type to use.'
+    required: false
+    default: ubuntu
+    options:
+      - ubuntu
+      - windows
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: ${{ inputs.java_distribution }}
+        java-version: ${{ inputs.java_version }}
+
+    - name: Copy gradle.properties
+      shell: bash
+      run: |
+        cp gradle.properties.example gradle.properties
+
+    - name: Setup DynamoDB Service
+      if: inputs.os_type == 'ubuntu'
+      shell: bash
+      run: |
+        sudo docker run -d -p 8000:8000 amazon/dynamodb-local
+
+    - name: Setup DynamoDB Service
+      if: inputs.os_type == 'windows'
+      shell: pwsh
+      run: |
+        $ProgressPreference = "SilentlyContinue"
+        iwr -outf dynamo.zip https://s3-us-west-2.amazonaws.com/dynamodb-local/dynamodb_local_latest.zip
+        mkdir dynamo
+        Expand-Archive -Path dynamo.zip -DestinationPath dynamo
+        cd dynamo
+        Start-Process -FilePath "java" -ArgumentList "-D`"java.library.path=./DynamoDBLocal_lib`"","-jar","DynamoDBLocal.jar"
+
+    - name: Restore Dependencies
+      shell: bash
+      run: ./gradlew dependencies
+
+    - name: Build Jar
+      shell: bash
+      id: buildjar
+      run: ./gradlew jar
+
+    - name: Build Documentation
+      shell: bash
+      run: ./gradlew javadoc
+
+    - name: Check Style
+      shell: bash
+      run: ./gradlew checkstyleMain
+
+    - name: Run Tests
+      if: steps.buildjar.outcome == 'success'
+      shell: bash
+      run: ./gradlew test

@@ -1,0 +1,42 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main, feat/**]
+    paths-ignore:
+      - '**.md' #Do not need to run CI for markdown changes.
+  pull_request:
+    branches: [main, feat/**]
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  build-test-linux:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        javaversion: [8, 11, 17, 19]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Shared CI Steps
+        uses: ./.github/actions/ci
+        with:
+          os_type: ubuntu
+          java_version: ${{ matrix.javaversion }}
+
+  build-test-windows:
+    strategy:
+      matrix:
+        os: [windows-latest]
+        javaversion: [11, 17]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Shared CI Steps
+        uses: ./.github/actions/ci
+        with:
+          os_type: windows
+          java_version: ${{ matrix.javaversion }}
