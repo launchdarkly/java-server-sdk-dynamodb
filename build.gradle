@@ -51,7 +51,7 @@ dependencies {
     testImplementation "junit:junit:4.12"
     testImplementation "com.launchdarkly:launchdarkly-java-server-sdk:${versions.sdk}:test" // our unit tests use helper classes from the SDK
     testImplementation "com.google.guava:guava:28.2-jre" // required by SDK tests, not used in this library itself
-    testImplementation "com.google.code.gson:gson:2.7" // same as above
+    testImplementation "com.google.code.gson:gson:2.14.0" // same as above
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
