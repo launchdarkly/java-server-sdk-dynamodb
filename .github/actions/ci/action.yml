@@ -23,7 +23,11 @@ runs:
       uses: actions/setup-java@v4
       with:
         distribution: ${{ inputs.java_distribution }}
-        java-version: ${{ inputs.java_version }}
+        # Gradle requires Java 17+ to run. The last version listed becomes the default JAVA_HOME;
+        # the tests run on inputs.java_version via a toolchain.
+        java-version: |
+          ${{ inputs.java_version }}
+          17
 
     - name: Copy gradle.properties
       shell: bash
@@ -67,4 +71,4 @@ runs:
     - name: Run Tests
       if: steps.buildjar.outcome == 'success'
       shell: bash
-      run: ./gradlew test
+      run: ./gradlew test -PtestJavaVersion=${{ inputs.java_version }} -Porg.gradle.java.installations.fromEnv=JAVA_HOME_${{ inputs.java_version }}_X64

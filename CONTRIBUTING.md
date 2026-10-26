@@ -14,7 +14,7 @@ We encourage pull requests and other contributions from the community. Before su
  
 ### Prerequisites
  
-The library builds with [Gradle](https://gradle.org/) and should be built against Java 8.
+The library builds with [Gradle](https://gradle.org/), which requires Java 17 or later to run. The compiled library targets Java 8.
  
 ### Building
 
@@ -38,6 +38,11 @@ If you wish to use an interim build in another Maven/Gradle project such as [hel
 To build the library and run all unit tests:
 ```
 ./gradlew test
+```
+
+To run the tests on a different JVM than the one running Gradle, such as Java 8, pass the Java version (Gradle must be able to [find that JDK](https://docs.gradle.org/current/userguide/toolchains.html#sec:auto_detection)):
+```
+./gradlew test -PtestJavaVersion=8
 ```
 
 The tests expect you to have DynamoDB running locally. The simplest way to do that is with Docker:

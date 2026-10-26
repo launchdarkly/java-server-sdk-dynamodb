@@ -12,8 +12,7 @@ plugins {
     id "checkstyle"
     id "signing"
     id "maven-publish"
-    id "de.marcphilipp.nexus-publish" version "0.4.0"
-    id "io.codearte.nexus-staging" version "0.30.0"
+    id "io.github.gradle-nexus.publish-plugin" version "2.0.0"
     id "idea"
 }
 
@@ -25,16 +24,28 @@ configurations.all {
 repositories {
     mavenLocal()
     // Before LaunchDarkly release artifacts get synced to Maven Central they are here along with snapshots:
-    maven { url "https://oss.sonatype.org/content/groups/public/" }
+    maven { url = "https://oss.sonatype.org/content/groups/public/" }
     mavenCentral()
 }
 
 allprojects {
     group = 'com.launchdarkly'
     version = "${version}"
-    archivesBaseName = 'launchdarkly-java-server-sdk-dynamodb-store'
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+}
+
+base {
+    archivesName = 'launchdarkly-java-server-sdk-dynamodb-store'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    withJavadocJar()
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
 }
 
 ext.versions = [
@@ -54,21 +65,13 @@ dependencies {
     testImplementation "com.google.code.gson:gson:2.7" // same as above
 }
 
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-}
-
-artifacts {
-    archives sourcesJar, javadocJar
-}
-
 test {
+    // Gradle itself requires Java 17+, so to run the tests on another JVM pass -PtestJavaVersion=<version>.
+    if (project.hasProperty("testJavaVersion")) {
+        javaLauncher = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(project.property("testJavaVersion"))
+        }
+    }
     testLogging {
         events "passed", "skipped", "failed", "standardOut", "standardError"
         showStandardStreams = true
@@ -88,24 +91,16 @@ idea {
     }
 }
 
-nexusStaging {
-    packageGroup = "com.launchdarkly"
-    numberOfRetries = 40 // we've seen extremely long delays in closing repositories
-}
-
 publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
 
             groupId = 'com.launchdarkly'
-            artifactId = project.archivesBaseName
-            
-            artifact sourcesJar
-            artifact javadocJar
-            
+            artifactId = base.archivesName.get()
+
             pom {
-                name = project.archivesBaseName
+                name = base.archivesName.get()
                 description = 'LaunchDarkly Java SDK DynamoDB integration'
                 url = 'https://github.com/launchdarkly/java-server-sdk-dynamodb'
                 licenses {
@@ -137,8 +132,10 @@ nexusPublishing {
     clientTimeout = java.time.Duration.ofMinutes(3) // we've seen extremely long delays in creating repositories
     repositories {
         sonatype {
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
             username = ossrhUsername
-            password = ossrhPassword            
+            password = ossrhPassword
         }
     }
 }
