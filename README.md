@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> This repository is archived. The DynamoDB integration has moved to the [java-core repository](https://github.com/launchdarkly/java-core/tree/main/lib/java-server-sdk-dynamodb-store), and new releases come from there.
+
 # LaunchDarkly SDK for Java - DynamoDB integration
 
 [![Circle CI](https://circleci.com/gh/launchdarkly/java-server-sdk-dynamodb.svg?style=shield)](https://circleci.com/gh/launchdarkly/java-server-sdk-dynamodb)
